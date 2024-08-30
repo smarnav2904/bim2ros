@@ -27,6 +27,11 @@ processing_times = []
 iteration_counter = 0
 occurrence_publisher = None  # Publisher for element occurrences
 
+RES = 0.2
+GRID_SIZEX = 220
+GRID_SIZEY = 220
+GRID_SIZEZ = 20
+
 def load_ifc_model(model_path):
     try:
         model = ifcopenshell.open(model_path)
@@ -36,33 +41,36 @@ def load_ifc_model(model_path):
         return None
 
 def find_closest_objects_to_point_cloud(points):
+
+    
     for point in points:
         index = point2grid(point[0], point[1], point[2], onedivres, grid_stepy, grid_stepz)
         if loaded_data_zeros[index] == 0 and loaded_data[index]:
             element_value = loaded_data[index]
             element_occurrences[element_value] = element_occurrences.get(element_value, 0) + 1
             loaded_data_zeros[index] = 1
+        
 
-    closest_to_20_percent = float('inf')
+    closest_to_target_ratio = float('inf')
     closest_element_value = None
+    target_ratio = 0.30  # Target ratio is 30%
 
     for element_value, count in element_occurrences.items():
         total_count = total_element_occurrences.get(element_value, 0)
-        ratio = count / total_count
-        if ratio >= 0.0:
-            timestamp = datetime.now().isoformat()
-            ratios_and_times[element_value] = (ratio, timestamp)
-            difference = abs(ratio - 0.20)
-            if difference < closest_to_20_percent:
-                closest_to_20_percent = difference
-                closest_element_value = element_value
+        if total_count > 0:  # Ensure no division by zero
+            ratio = count / total_count
+            if ratio <= target_ratio:  # Ensure the ratio is not greater than the target
+                difference = target_ratio - ratio
+                if difference < closest_to_target_ratio:
+                    closest_to_target_ratio = difference
+                    closest_element_value = element_value
+                    ratios_and_times[element_value] = (ratio, datetime.now().isoformat())
 
     if closest_element_value is not None:
         closest_ratio, timestamp = ratios_and_times[closest_element_value]
-        rospy.loginfo(f"\033[92mValue closest to 20% ratio {closest_element_value}: Ratio {closest_ratio:.2%} at {timestamp} \033[0m")
+        rospy.loginfo(f"\033[92mValue closest to target ratio {closest_element_value}: Ratio {closest_ratio:.2%} at {timestamp} \033[0m")
 
         # Publish the closest element occurrence
-
         occurrence_msg = ElementOcurrences()
         occurrence_msg.element_value = int(closest_element_value)
         occurrence_msg.ratio = closest_ratio * 100
@@ -80,7 +88,9 @@ def calculate_grid_zeros_ratio():
     rospy.loginfo(f"\033[94mGrids explored: {grids_turned_to_one} / {total_counts} ({ratio:.2%}) \033[0m")
 
 def point2grid(x, y, z, onedivres, grid_stepy, grid_stepz):
-    return int(np.floor(x * onedivres) + np.floor(y * onedivres) * grid_stepy + np.floor(z * onedivres) * grid_stepz)
+    
+    return int(np.floor(x * onedivres) + (np.floor(y * onedivres) * grid_stepy) + (np.floor(z * onedivres) * grid_stepz))
+    
 
 def crop_cloud(cl, maxdist, mindist=0.00):
     cldist = np.linalg.norm(cl[:, 0:2], axis=1)
@@ -93,7 +103,7 @@ def save_element_occurrences(filename):
                 f.write(f"{element_value}:{ratio:.2%}\n")
             f.write("-------------------------------------------------------\n")
             for grids_turned_to_one, total_counts, ratio, timestamp in grids_turned_to_one_times:
-                f.write(f"Grids turned to 1: {grids_turned_to_one} / {total_counts} ({ratio:.2%}) at {timestamp}\n")
+                f.write(f"Grids turned to 1: {grids_turned_to_one} / {total_counts} ({ratio:.2%})\n")
     except Exception as e:
         rospy.logerr(f"Failed to save element occurrences: {e}")
 
@@ -101,7 +111,6 @@ def pointcloud_callback(msg):
     global iteration_counter
     iteration_counter += 1
 
-    start = time.time()
     points = point_cloud2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)
     pcl_example = [(point[0], point[1], point[2]) for point in points]
 
@@ -123,12 +132,6 @@ def pointcloud_callback(msg):
         except tf2_ros.TransformException as ex:
             rospy.logwarn(f"Transform failed: {ex}")
 
-    end = time.time()
-    processing_time = end - start
-    processing_times.append(processing_time)
-
-    mean_processing_time = sum(processing_times) / len(processing_times)
-    # rospy.loginfo(f"\033[93mIteration {iteration_counter}: Mean processing time: {mean_processing_time:.2f} seconds \033[0m")
 
     find_closest_objects_to_point_cloud(transformed_points)
     save_element_occurrences("element_occurrences.txt")
@@ -151,17 +154,14 @@ def main():
 
     element_occurrences = {}
 
-    RES = 0.1
-    GRID_SIZEX = 220
-    GRID_SIZEY = 220
-    GRID_SIZEZ = 20
+    
     onedivres = 1 / RES
-    grid_stepy = GRID_SIZEX
-    grid_stepz = GRID_SIZEX * GRID_SIZEY
+    grid_stepy = GRID_SIZEX * onedivres
+    grid_stepz = (GRID_SIZEX*onedivres) * (GRID_SIZEY*onedivres)
 
-    file = "/home/rva_container/rva_exchange/catkin_ws/src/Heuristic_path_planners/scripts/semantic_grid_ints.npy"
+    file = "/home/rva_container/rva_exchange/catkin_ws/src/bim2ros/scripts/semantic_grid_ints.npy"
     loaded_data = np.load(file)
-    file = "/home/rva_container/rva_exchange/catkin_ws/src/Heuristic_path_planners/scripts/semantic_grid_zeros.npy"
+    file = "/home/rva_container/rva_exchange/catkin_ws/src/bim2ros/scripts/semantic_grid_zeros.npy"
     loaded_data_zeros = np.load(file)
 
     calculate_total_occurrences()

@@ -164,6 +164,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   scripts/bim2ros.py
   scripts/newgoal.py
+  scripts/pathfollower.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
