@@ -165,6 +165,12 @@ catkin_install_python(PROGRAMS
   scripts/bim2ros.py
   scripts/newgoal.py
   scripts/pathfollower.py
+  scripts/threads.py
+  scripts/threads_metrics.py
+  scripts/kdtree.py
+  scripts/saver.py
+  scripts/voronoi_publisher.py
+  scripts/TSP.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

@@ -92,8 +92,8 @@ def check_if_cells_free(point, r):
                 neighbor_point = [point[0] + dx, point[1] + dy, point[2] + dz]
                 index = point2grid(neighbor_point[0], neighbor_point[1], neighbor_point[2])
                 if loaded_data[index]:  # If any neighbor is occupied
-                    # return False
-                    print('')
+                     return False
+
     return True  # All neighbors are free
 
 
@@ -155,7 +155,7 @@ def callback_element(msg):
                 else:
                     point = pos + thresh * np.array([0, 0, 1])
 
-                radius = 1.0 #Add in meters!!
+                radius = 0.0 #Add in meters!!
 
                 # Check if the point and its neighbors are free
                 if check_if_cells_free(point, radius):
