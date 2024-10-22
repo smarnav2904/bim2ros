@@ -11,7 +11,7 @@ from get_nexus import get_centroid_data  # Import the centroid function
 import itertools
 
 # Constants
-RES = 0.5
+RES = 0.2
 GRID_SIZEX = 200
 GRID_SIZEY = 60
 GRID_SIZEZ = 4
@@ -163,7 +163,7 @@ def calculate_centroids(points, labels):
     return np.array(centroids)
 
 def cluster_and_save_centroids(file_path, ifc_file_path, radius, min_samples=1, 
-                               output_npy="centroids_data.npy", scale_factor=10):
+                               output_npy="results/centroids_data.npy", scale_factor=10):
     
     if not os.path.exists(file_path):
         print(f"File '{file_path}' not found.")
@@ -252,11 +252,11 @@ def process_points(tree, onedivres):
                         if e.is_a() in ['IfcWallStandardCase', 'IfcCurtainWall', 'IfcWall', 'IfcMember', 'IfcColumn', 'IfcSlab', 'IfcRoof', 'IfcRailing']:
                             edf[x][y][z] = 0  # Mark obstacle
 
-    save_results(edf, output_file="occupancy_grid.npy")
+    save_results(edf, output_file="results/occupancy_grid.npy")
     return edf
 
 # Saving Results
-def save_results(edf, output_file='edf.npy'):
+def save_results(edf, output_file='results/edf.npy'):
     np.save(output_file, edf)
 
 def update_edf(edf, onedivres):
@@ -334,7 +334,7 @@ def calculate_derivatives_3d(matrix):
 
 # Main Execution
 if __name__ == "__main__":
-    ifc_file_path = '../models/atlas_1F.ifc'
+    ifc_file_path = '/home/santi/bim2ros/models/atlas_1F.ifc'
     
     # Setup IFC geometry
     ifc_file, settings = setup_ifc_geometry(ifc_file_path)
@@ -352,12 +352,12 @@ if __name__ == "__main__":
     edf = np.transpose(edf, (0, 1, 2))
 
     voronoi_frontier = calculate_derivatives_3d(edf)
-    save_results(voronoi_frontier, output_file="voronoi_frontier.npy")
+    save_results(voronoi_frontier, output_file="results/voronoi_frontier.npy")
 
     radius = 3
-    cluster_and_save_centroids("voronoi_frontier.npy", ifc_file_path, radius, scale_factor=onedivres)
+    cluster_and_save_centroids("results/voronoi_frontier.npy", ifc_file_path, radius, scale_factor=onedivres)
 
-    cluster_centroids, ifc_centroids = load_centroid_data("centroids_data.npy")
+    cluster_centroids, ifc_centroids = load_centroid_data("results/centroids_data.npy")
     all_centroids = np.concatenate((cluster_centroids, ifc_centroids)).astype(int)
     
     # Filter centroids based on Z axis
@@ -375,7 +375,7 @@ if __name__ == "__main__":
     adjacency_matrix, cost_matrix = check_adjacency_and_build_matrix(direction_vectors, edf, all_centroids, ifc_centroids)
 
     # Save the matrices to a file
-    save_matrices(adjacency_matrix, cost_matrix, "adjacency_and_cost_matrices")
+    save_matrices(adjacency_matrix, cost_matrix, "results/adjacency_and_cost_matrices.npy")
     
     # Print the adjacency matrix and cost matrix
     
