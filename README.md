@@ -1,8 +1,8 @@
-# Project Title
+# BIM2ROS
 
 ![Banner Image](resources/banner.png)
 
-IN DEVELOPMENT
+This repo aims to be one of the steps to integrate Building Information Modeling (or BIM) within ROS.
 ---
 
 ## Table of Contents
@@ -16,21 +16,17 @@ IN DEVELOPMENT
 
 ## Introduction
 
-
-
-**IN DEVELOPMENT:**
-
-
+BIM2ROS is a toolkit that integrates Building Information Modeling (BIM) with the Robot Operating System (ROS), enabling robots to navigate and interact within 3D architectural spaces. It converts BIM data (e.g., from IFC files) into ROS-compatible formats, supporting tasks like path planning and obstacle avoidance in construction, facility management, and smart buildings. BIM2ROS streamlines the use of robotic systems in BIM environments, enhancing efficiency and accuracy in autonomous operations. This repo just contains the code regarding generation of information used in navigation, to further extend, check this list:
+- Pending
+- Pending
 ---
 
 ## Features
 
-Highlight the main features of your project here.
 
 - **EDF Calculation:** Uses Euclidean Distance Field to represent obstacles and open space.
 - **Graph Construction:** Dynamically builds a graph based on obstacle-free paths.
-- **Efficient Pathfinding:** Implements the 3D Bresenham algorithm for collision-free path detection.
-- **Visualization:** Uses Mayavi for interactive 3D visualization.
+
 
 ---
 
