@@ -16,7 +16,7 @@ This repo aims to be one of the steps to integrate Building Information Modeling
 
 ## Introduction
 
-BIM2ROS is a toolkit that integrates Building Information Modeling (BIM) with the Robot Operating System (ROS), enabling robots to navigate and interact within 3D architectural spaces. It converts BIM data (e.g., from IFC files) into ROS-compatible formats, supporting tasks like path planning and obstacle avoidance in construction, facility management, and smart buildings. BIM2ROS streamlines the use of robotic systems in BIM environments, enhancing efficiency and accuracy in autonomous operations. This repo just contains the code regarding generation of information used in navigation, to further extend, check this list:
+BIM2ROS is a toolkit that integrates Building Information Modeling (BIM) with the Robot Operating System (ROS), enabling robots to navigate and interact within 3D architectural spaces. It converts BIM data (e.g., from IFC files) into ROS-compatible formats, supporting tasks like path planning and obstacle avoidance in construction, facility management, and smart buildings. BIM2ROS streamlines the use of robotic systems in BIM environments, enhancing efficiency and accuracy in autonomous operations. This repo just contains the code regarding generation of information used in navigation and inspection, to further extend, check this list:
 - Pending
 - Pending
 ---
@@ -31,15 +31,22 @@ BIM2ROS is a toolkit that integrates Building Information Modeling (BIM) with th
 ---
 
 ## Installation
-
-**IN DEVELOPMENT:**
-
+Just as easy as:
+```
+pip install -R requirements.txt
+```
 
 ---
 
 ## Usage
 
+1. Drop your IFC file from your BIM project on `Models` folder.
+2. Create your own launch file on the `launch` folder. (Be sure to put the correct params for your project to avoid memory overuse).
+3. Run:
+   ```
+   roslaunch bim2ros your_launch.launch
+   ```
+   It will start creating lots of useful information on the results folder.
 
-
-**IN DEVELOPMENT:**
-
+## Element Inspection
+WIP
