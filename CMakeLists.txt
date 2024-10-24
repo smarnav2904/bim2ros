@@ -162,15 +162,8 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  scripts/bim2ros.py
-  scripts/newgoal.py
-  scripts/pathfollower.py
-  scripts/threads.py
-  scripts/threads_metrics.py
-  scripts/kdtree.py
-  scripts/saver.py
-  scripts/voronoi_publisher.py
-  scripts/TSP.py
+  scripts/navigation/path_field_gen.py
+  
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

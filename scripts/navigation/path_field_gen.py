@@ -7,16 +7,22 @@ import edt
 from tqdm import tqdm  # Add tqdm for progress bar
 from sklearn.cluster import DBSCAN
 import os
+import sys
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+
 from get_nexus import get_centroid_data  # Import the centroid function
 import itertools
 import rospy
 import roslib
 
 # Constants
-RES = rospy.get_param('~resolution', 0.2)
-GRID_SIZEX = rospy.get_param('~world_sizeX', 200)
-GRID_SIZEY = rospy.get_param('~world_sizeY', 60)
-GRID_SIZEZ = rospy.get_param('~world_sizeZ', 0.2)
+RES = rospy.get_param('resolution', 0.2)
+GRID_SIZEX = rospy.get_param('world_sizeX', 200)
+GRID_SIZEY = rospy.get_param('world_sizeY', 60)
+GRID_SIZEZ = rospy.get_param('world_sizeZ', 0.2)
+PACKAGE_NAME = 'bim2ros'  # Change this to your actual package name
 
 # Function to get the package path
 def get_package_path(package_name):
@@ -169,7 +175,7 @@ def calculate_centroids(points, labels):
     return np.array(centroids)
 
 def cluster_and_save_centroids(file_path, ifc_file_path, radius, min_samples=1, 
-                               output_npy="scripts/navigation/results/centroids_data.npy", scale_factor=10):
+                               output_npy=os.path.join(get_package_path(PACKAGE_NAME), "scripts/navigation/results/centroids_data.npy"), scale_factor=10):
     
     if not os.path.exists(file_path):
         print(f"File '{file_path}' not found.")
@@ -258,10 +264,11 @@ def process_points(tree, onedivres):
                         if e.is_a() in ['IfcWallStandardCase', 'IfcCurtainWall', 'IfcWall', 'IfcMember', 'IfcColumn', 'IfcSlab', 'IfcRoof', 'IfcRailing']:
                             edf[x][y][z] = 0  # Mark obstacle
 
-    save_results(edf, output_file="scripts/navigation/results/occupancy_grid.npy")
+    save_results(edf, output_file=os.path.join(get_package_path(PACKAGE_NAME), "scripts/navigation/results/edf.npy"))
     return edf
 
 # Saving Results
+
 def save_results(edf, output_file='scripts/navigation/results/edf.npy'):
     np.save(output_file, edf)
 
@@ -315,11 +322,13 @@ if __name__ == "__main__":
     rospy.init_node('path_field_gen')
 
         # Define your package name
-    PACKAGE_NAME = 'bim2ros'  # Change this to your actual package name
+    
 
     # Construct the full path using roslib
-    ifc_file_path = os.path.join(get_package_path(PACKAGE_NAME), rospy.get_param('~map'))
+    ifc_file_path = os.path.join(get_package_path(PACKAGE_NAME), 'models/', rospy.get_param('map'))
 
+
+    print(ifc_file_path)
     
     # Setup IFC geometry
     ifc_file, settings = setup_ifc_geometry(ifc_file_path)
@@ -332,7 +341,7 @@ if __name__ == "__main__":
     # Update the grid to compute Euclidean distances
     edf = update_edf(edf, onedivres)
     
-    save_results(edf)
+    save_results(edf, output_file=os.path.join(get_package_path(PACKAGE_NAME), "scripts/navigation/results/edf.npy"))
     
     edf = np.transpose(edf, (0, 1, 2))
 
