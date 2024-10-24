@@ -88,9 +88,9 @@ def save_mst(mst_edges, filename):
         print(f"Error saving MST: {e}")
 
 def main():
-    filename = "results/adjacency_and_cost_matrices.npy"
-    centroids_filename = "results/centroids_data.npy"
-    mst_output_filename = "results/mst_edges.npy"  # Filename to save MST
+    filename = "scripts/navigation/results/adjacency_and_cost_matrices.npy"
+    centroids_filename = "scripts/navigation/results/centroids_data.npy"
+    mst_output_filename = "scripts/navigation/results/mst_edges.npy"  # Filename to save MST
 
     adjacency_matrix, cost_matrix, all_centroids = load_data(filename, centroids_filename)
 

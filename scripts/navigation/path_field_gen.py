@@ -9,12 +9,18 @@ from sklearn.cluster import DBSCAN
 import os
 from get_nexus import get_centroid_data  # Import the centroid function
 import itertools
+import rospy
+import roslib
 
 # Constants
-RES = 0.2
-GRID_SIZEX = 200
-GRID_SIZEY = 60
-GRID_SIZEZ = 4
+RES = rospy.get_param('~resolution', 0.2)
+GRID_SIZEX = rospy.get_param('~world_sizeX', 200)
+GRID_SIZEY = rospy.get_param('~world_sizeY', 60)
+GRID_SIZEZ = rospy.get_param('~world_sizeZ', 0.2)
+
+# Function to get the package path
+def get_package_path(package_name):
+    return roslib.packages.get_pkg_dir(package_name)
 
 def load_centroid_data(npy_file):
     try:
@@ -163,7 +169,7 @@ def calculate_centroids(points, labels):
     return np.array(centroids)
 
 def cluster_and_save_centroids(file_path, ifc_file_path, radius, min_samples=1, 
-                               output_npy="results/centroids_data.npy", scale_factor=10):
+                               output_npy="scripts/navigation/results/centroids_data.npy", scale_factor=10):
     
     if not os.path.exists(file_path):
         print(f"File '{file_path}' not found.")
@@ -252,11 +258,11 @@ def process_points(tree, onedivres):
                         if e.is_a() in ['IfcWallStandardCase', 'IfcCurtainWall', 'IfcWall', 'IfcMember', 'IfcColumn', 'IfcSlab', 'IfcRoof', 'IfcRailing']:
                             edf[x][y][z] = 0  # Mark obstacle
 
-    save_results(edf, output_file="results/occupancy_grid.npy")
+    save_results(edf, output_file="scripts/navigation/results/occupancy_grid.npy")
     return edf
 
 # Saving Results
-def save_results(edf, output_file='results/edf.npy'):
+def save_results(edf, output_file='scripts/navigation/results/edf.npy'):
     np.save(output_file, edf)
 
 def update_edf(edf, onedivres):
@@ -292,24 +298,6 @@ def calculate_derivatives_3d(matrix):
                     dz1 = derivative(matrix[i, j, k], matrix[i, j, k + 1])  # Forward in Z
                     dz2 = derivative(matrix[i, j, k - 1], matrix[i, j, k])  # Backward in Z
                     
-                    # Calculate diagonal derivatives in the XY-plane
-                    d_diag11 = derivative(matrix[i, j, k], matrix[i+1, j+1, k])  # Bottom-right
-                    d_diag12 = derivative(matrix[i-1, j-1, k], matrix[i, j, k])  # Top-left
-
-                    d_diag21 = derivative(matrix[i, j, k], matrix[i+1, j-1, k])  # Bottom-left
-                    d_diag22 = derivative(matrix[i-1, j+1, k], matrix[i, j, k])  # Top-right
-
-                    # Calculate diagonal derivatives in the XZ-plane
-                    d_diag_xz1 = derivative(matrix[i, j, k], matrix[i+1, j, k+1])  # Bottom-right along XZ
-                    d_diag_xz2 = derivative(matrix[i-1, j, k-1], matrix[i, j, k])  # Top-left along XZ
-
-                    # Calculate diagonal derivatives in the YZ-plane
-                    d_diag_yz1 = derivative(matrix[i, j, k], matrix[i, j+1, k+1])  # Right along YZ
-                    d_diag_yz2 = derivative(matrix[i, j-1, k-1], matrix[i, j, k])  # Left along YZ
-
-                    # Calculate full 3D diagonal derivatives
-                    d_diag_3d1 = derivative(matrix[i, j, k], matrix[i+1, j+1, k+1])  # Moving in all X, Y, Z
-                    d_diag_3d2 = derivative(matrix[i-1, j-1, k-1], matrix[i, j, k])  # Opposite direction in X, Y, Z
 
                     if ((np.sign(dx1) == np.sign(-dx2) and np.sign(dx1)<0) or
                         (np.sign(dy1) == np.sign(-dy2) and np.sign(dy1)<0) or
@@ -317,24 +305,21 @@ def calculate_derivatives_3d(matrix):
                         change_matrix[i, j, k] = 1  # White (change detected)
 
 
-                    # Check if derivatives have the same sign
-                    # if ((np.sign(dx1) == np.sign(-dx2) and np.sign(dx1)<0) or
-                    #     (np.sign(dy1) == np.sign(-dy2) and np.sign(dy1)<0) or
-                    #     (np.sign(dz1) == np.sign(-dz2) and np.sign(dz1)<0) or
-                    #     (np.sign(d_diag11) == np.sign(-d_diag12) and np.sign(d_diag11)<0) or
-                    #     (np.sign(d_diag21) == np.sign(-d_diag22) and np.sign(d_diag21)<0) or
-                    #     (np.sign(d_diag_xz1) == np.sign(-d_diag_xz2) and np.sign(d_diag_xz1)<0) or
-                    #     (np.sign(d_diag_yz1) == np.sign(-d_diag_yz2) and np.sign(d_diag_yz1)<0) or
-                    #     (np.sign(d_diag_3d1) == np.sign(-d_diag_3d2)) and np.sign(d_diag_3d1)<0):
-                    #     change_matrix[i, j, k] = 1  # White (change detected)
-
                 
 
     return change_matrix
 
 # Main Execution
 if __name__ == "__main__":
-    ifc_file_path = '/home/santi/bim2ros/models/atlas_1F.ifc'
+
+    rospy.init_node('path_field_gen')
+
+        # Define your package name
+    PACKAGE_NAME = 'bim2ros'  # Change this to your actual package name
+
+    # Construct the full path using roslib
+    ifc_file_path = os.path.join(get_package_path(PACKAGE_NAME), rospy.get_param('~map'))
+
     
     # Setup IFC geometry
     ifc_file, settings = setup_ifc_geometry(ifc_file_path)
@@ -352,12 +337,14 @@ if __name__ == "__main__":
     edf = np.transpose(edf, (0, 1, 2))
 
     voronoi_frontier = calculate_derivatives_3d(edf)
-    save_results(voronoi_frontier, output_file="results/voronoi_frontier.npy")
+    save_results(voronoi_frontier, output_file=os.path.join(get_package_path(PACKAGE_NAME), "scripts/navigation/results/voronoi_frontier.npy"))
 
+    
     radius = 3
-    cluster_and_save_centroids("results/voronoi_frontier.npy", ifc_file_path, radius, scale_factor=onedivres)
+    cluster_and_save_centroids(os.path.join(get_package_path(PACKAGE_NAME), "scripts/navigation/results/voronoi_frontier.npy"), ifc_file_path, radius, scale_factor=onedivres)
 
-    cluster_centroids, ifc_centroids = load_centroid_data("results/centroids_data.npy")
+    
+    cluster_centroids, ifc_centroids = load_centroid_data(os.path.join(get_package_path(PACKAGE_NAME), "scripts/navigation/results/centroids_data.npy"))
     all_centroids = np.concatenate((cluster_centroids, ifc_centroids)).astype(int)
     
     # Filter centroids based on Z axis
@@ -375,7 +362,8 @@ if __name__ == "__main__":
     adjacency_matrix, cost_matrix = check_adjacency_and_build_matrix(direction_vectors, edf, all_centroids, ifc_centroids)
 
     # Save the matrices to a file
-    save_matrices(adjacency_matrix, cost_matrix, "results/adjacency_and_cost_matrices.npy")
+    save_matrices(adjacency_matrix, cost_matrix, os.path.join(get_package_path(PACKAGE_NAME), "scripts/navigation/results/adjacency_and_cost_matrices.npy")
+ )
     
     # Print the adjacency matrix and cost matrix
     
