@@ -14,6 +14,8 @@ import time
 from grid_message.msg import ElementOcurrences  # Import the custom message
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
+import rospy
+import roslib
 
 # Global variable initialization
 tf_buffer = None
@@ -32,12 +34,18 @@ occurrence_publisher = None  # Publisher for element occurrences
 
 lock = threading.Lock()  # Lock for safe access to shared variables
 
-RES = 0.1
-GRID_SIZEX = 50
-GRID_SIZEY = 50
-GRID_SIZEZ = 50
+PACKAGE_NAME = 'bim2ros'
+
+RES = rospy.get_param('resolution', 0.2)
+GRID_SIZEX = rospy.get_param('world_sizeX', 20)
+GRID_SIZEY = rospy.get_param('world_sizeY', 20)
+GRID_SIZEZ = rospy.get_param('world_sizeZ', 4)
+
 PUBLISH_INTERVAL = 5  # Only publish every 2 seconds
 last_publish_time = 0  # Track when we last published
+
+def get_package_path(package_name):
+    return roslib.packages.get_pkg_dir(package_name)
 
 def load_ifc_model(model_path):
     try:
@@ -162,7 +170,7 @@ def pointcloud_callback(msg):
                 transformed_points.append(result)
 
     find_closest_objects_to_point_cloud(transformed_points)
-    save_element_occurrences("element_occurrences.txt")
+    save_element_occurrences(os.path.join(get_package_path(PACKAGE_NAME), 'grids/elements_ocurrences.txt'))
 
 def calculate_total_occurrences():
     unique, counts = np.unique(loaded_data, return_counts=True)
@@ -191,9 +199,9 @@ def main():
     grid_stepy = tam_x
     grid_stepz = tam_x * tam_y
 
-    file = "/home/rva_container/rva_exchange/catkin_ws/src/bim2ros/scripts/semantic_grid_ints.npy"
+    file = os.path.join(get_package_path(PACKAGE_NAME), 'grids/semantic_grid_ints.npy')
     loaded_data = np.load(file)
-    file = "/home/rva_container/rva_exchange/catkin_ws/src/bim2ros/scripts/semantic_grid_zeros.npy"
+    file = os.path.join(get_package_path(PACKAGE_NAME), 'grids/semantic_grid_zeros.npy')
     loaded_data_zeros = np.load(file)
 
     calculate_total_occurrences()
