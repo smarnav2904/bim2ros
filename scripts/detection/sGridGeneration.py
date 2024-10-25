@@ -10,10 +10,10 @@ import roslib
 
 PACKAGE_NAME = 'bim2ros'
 # Constants
-RES = rospy.get_param('~resolution', 0.2)
-GRID_SIZEX = rospy.get_param('~world_sizeX', 200)
-GRID_SIZEY = rospy.get_param('~world_sizeY', 60)
-GRID_SIZEZ = rospy.get_param('~world_sizeZ', 0.2)
+RES = rospy.get_param('resolution', 0.2)
+GRID_SIZEX = rospy.get_param('world_sizeX', 20)
+GRID_SIZEY = rospy.get_param('world_sizeY', 20)
+GRID_SIZEZ = rospy.get_param('world_sizeZ', 4)
 
 def get_package_path(package_name):
     return roslib.packages.get_pkg_dir(package_name)
@@ -81,7 +81,7 @@ def process_points(tree, onedivres, grid_stepy, grid_stepz):
 
                         assigned_int = global_id_to_int[item.GlobalId]
                         index = point2grid(x, y, z, onedivres, grid_stepy, grid_stepz)
-                        semantic_grid_ints[index] = np.int16(assigned_int)
+                        semantic_grid_ints[index] = assigned_int
                         print(f'{formatted_search_point} -> {assigned_int} -> {index}')
                 
     return result_dict, global_id_to_int, semantic_grid_ints, semantic_grid_zeros
@@ -116,3 +116,4 @@ if __name__ == "__main__":
 
     result_dict, global_id_to_int, semantic_grid_ints, semantic_grid_zeros = process_points(tree, onedivres, grid_stepy, grid_stepz)
     save_results(global_id_to_int, result_dict, semantic_grid_ints, semantic_grid_zeros)
+    print("\033[92mFinished cleanly!\033[0m")
