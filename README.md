@@ -49,4 +49,14 @@ pip install -r requirements.txt
    It will start creating lots of useful information on the results folder.
 
 ## Element Inspection
-WIP
+1. You would need to generate the 3D Grid and Semantic Mapping information, to do so, check `launch/start_generation.launch`. Then:
+   ```
+   roslaunch bim2ros generation.launch
+   ```
+   That would start creating all the necessary information.
+
+2. To start any inspection, first of all you would need to have your simulation open with a velodine laser publishing onto `velodine_points`. When you got that ready, launch:
+   ```
+   roslaunch bim2ros start_detection.launch
+   ```
+   
