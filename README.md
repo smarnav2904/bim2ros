@@ -33,7 +33,7 @@ BIM2ROS is a toolkit that integrates Building Information Modeling (BIM) with th
 ## Installation
 Just as easy as:
 ```
-pip install -R requirements.txt
+pip install -r requirements.txt
 ```
 
 ---
