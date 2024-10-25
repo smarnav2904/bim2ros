@@ -2,8 +2,8 @@
     <!-- Pass parameters to the node -->
 
     <param name="resolution" value="0.2"/>
-    <param name="world_sizeX" value="200"/>
-    <param name="world_sizeY" value="60"/>
+    <param name="world_sizeX" value="180"/>
+    <param name="world_sizeY" value="40"/>
     <param name="world_sizeZ" value="4"/>
 
 
