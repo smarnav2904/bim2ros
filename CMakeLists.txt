@@ -164,6 +164,9 @@ include_directories(
 catkin_install_python(PROGRAMS
   scripts/navigation/path_field_gen.py
   scripts/detection/sGridGeneration.py
+  scripts/detection/bim2ros.py
+  scripts/detection/pathfollower.py
+  scripts/navigation/TSP.py
   
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

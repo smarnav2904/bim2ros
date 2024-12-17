@@ -4,11 +4,11 @@
     <param name="resolution" value="0.1"/>
     <param name="world_sizeX" value="20"/>
     <param name="world_sizeY" value="20"/>
-    <param name="world_sizeZ" value="4"/>
+    <param name="world_sizeZ" value="8"/>
 
 
      <!-- add extension -->
-    <param name="map" value="casa.ifc"/>
+    <param name="map" value="casoplonv3.ifc"/>
 
     <!-- Launch the Python script as a node -->
     <node name="sGridGeneration" pkg="bim2ros" type="sGridGeneration.py" output="screen"/>

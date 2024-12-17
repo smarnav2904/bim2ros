@@ -40,7 +40,6 @@ RES = rospy.get_param('resolution', 0.2)
 GRID_SIZEX = rospy.get_param('world_sizeX', 20)
 GRID_SIZEY = rospy.get_param('world_sizeY', 20)
 GRID_SIZEZ = rospy.get_param('world_sizeZ', 4)
-
 PUBLISH_INTERVAL = 5  # Only publish every 2 seconds
 last_publish_time = 0  # Track when we last published
 
@@ -68,12 +67,12 @@ def find_closest_objects_to_point_cloud(points):
                 loaded_data_zeros[index] = 1
 
     # Use ThreadPoolExecutor to parallelize occurrence updates
-    with ThreadPoolExecutor(max_workers=8) as executor:  # Adjust max_workers for the number of threads
+    with ThreadPoolExecutor(max_workers=32) as executor:  # Adjust max_workers for the number of threads
         executor.map(update_element_occurrences, points)
 
     closest_to_target_ratio = float('inf')
     closest_element_value = None
-    target_ratio = 0.3 # Target ratio is 30%
+    target_ratio = 1 # Target ratio is 30%
 
     with lock:
         for element_value, count in element_occurrences.items():
@@ -128,11 +127,8 @@ def point2grid(x, y, z, grid_stepy, grid_stepz ):
 def save_element_occurrences(filename):
     try:
         with open(filename, 'a') as f:
-            for element_value, (ratio, timestamp,count, total_count) in ratios_and_times.items():
-                f.write(f"{element_value} -> {count} / {total_count} ({ratio:.2%})\n")
-            f.write("-------------------------------------------------------\n")
-            # for grids_turned_to_one, total_counts, ratio, timestamp in grids_turned_to_one_times:
-            #     f.write(f"Grids turned to 1: {grids_turned_to_one} / {total_counts} ({ratio:.2%})\n")
+            for element_value, count in element_occurrences.items():
+                f.write(f"{element_value} -> {count}\n")
     except Exception as e:
         rospy.logerr(f"Failed to save element occurrences: {e}")
 
@@ -141,8 +137,9 @@ def pointcloud_callback(msg):
 
     iteration_counter += 1
     points = point_cloud2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)
+    
     pcl_example = [(point[0], point[1], point[2]) for point in points]
-
+    
     rospy.loginfo(f"\033[93mIteration {iteration_counter}\033[0m")
 
     transformed_points = []
@@ -162,14 +159,18 @@ def pointcloud_callback(msg):
             return None
 
     # Use ThreadPoolExecutor to parallelize point transformations
-    with ThreadPoolExecutor(max_workers=8) as executor:  # Adjust max_workers for the number of threads
+    with ThreadPoolExecutor(max_workers=32) as executor:  # Adjust max_workers for the number of threads
         futures = [executor.submit(transform_point, point) for point in pcl_example]
         for future in as_completed(futures):
             result = future.result()
             if result:
                 transformed_points.append(result)
 
+    start = time.time()
     find_closest_objects_to_point_cloud(transformed_points)
+    end = time.time()
+    print(end-start)
+    
     save_element_occurrences(os.path.join(get_package_path(PACKAGE_NAME), 'grids/elements_ocurrences.txt'))
 
 def calculate_total_occurrences():

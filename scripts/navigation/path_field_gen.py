@@ -113,7 +113,7 @@ def move_along_direction_vector(c1, c2, step_size=1.0):
     return traversed_points
 
 def check_edf_at_steps(traversed_points, edf):
-    radius = 2
+    radius = 1
     edf_values, out_of_bounds = [], False
     
     for point in traversed_points:
@@ -143,7 +143,7 @@ def check_adjacency_and_build_matrix(direction_vectors, edf, all_centroids, ifc_
         traversed_points = move_along_direction_vector(c1, c2, step_size)
         edf_values, out_of_bounds = check_edf_at_steps(traversed_points, edf)
         
-        if not out_of_bounds and all(value != 0 for value in edf_values):
+        if not out_of_bounds and all(value > 0 for value in edf_values):
             idx1, idx2 = centroid_map[tuple(c1)], centroid_map[tuple(c2)]
             adjacency_matrix[idx1, idx2] = adjacency_matrix[idx2, idx1] = 1
 

@@ -1,0 +1,9 @@
+<launch>
+    <!-- Pass parameters to the node -->
+
+    <param name="resolution" value="0.2"/>
+    
+
+    <!-- Launch the Python script as a node -->
+    <node name="MST" pkg="bim2ros" type="MST.py" output="screen"/>
+</launch>

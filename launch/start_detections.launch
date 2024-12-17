@@ -4,8 +4,12 @@
     <param name="resolution" value="0.1"/>
     <param name="world_sizeX" value="20"/>
     <param name="world_sizeY" value="20"/>
-    <param name="world_sizeZ" value="4"/>
+    <param name="world_sizeZ" value="8"/>
+
+    <param name="threads" value="16"/>
+    <param name="marker_update_interval" value="1"/>
+    
 
     <!-- Launch the Python script as a node -->
-    <node name="bim2ros" pkg="bim2ros" type="threads.py" output="screen"/>
+    <node name="bim2ros" pkg="bim2ros" type="bim2ros.py" output="screen"/>
 </launch>

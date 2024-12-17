@@ -1,7 +1,15 @@
+#!/usr/bin/python3
+
 import numpy as np
 import time
 import os
-from mayavi import mlab  # Mayavi for 3D visualization
+import roslib
+import rospy
+
+PACKAGE_NAME = 'bim2ros'
+
+def get_package_path(package_name):
+    return roslib.packages.get_pkg_dir(package_name)
 
 def build_spanning_tree(cost_matrix):
     num_cities = cost_matrix.shape[0]
@@ -38,19 +46,6 @@ def build_spanning_tree(cost_matrix):
 
     return mst_edges
 
-def plot_mst_with_mayavi(mst_edges, centroids):
-    mlab.figure(bgcolor=(1, 1, 1))
-    x, y, z = centroids[:, 0], centroids[:, 1], centroids[:, 2]
-    mlab.points3d(x, y, z, color=(0, 0, 1), scale_factor=1.0)
-
-    for edge in mst_edges:
-        i, j = edge
-        x_vals = [centroids[i, 0], centroids[j, 0]]
-        y_vals = [centroids[i, 1], centroids[j, 1]]
-        z_vals = [centroids[i, 2], centroids[j, 2]]
-        mlab.plot3d(x_vals, y_vals, z_vals, color=(1, 0, 0), tube_radius=0.1)
-
-    mlab.show()
 
 def load_data(filename, centroids_filename): 
     try:
@@ -75,12 +70,7 @@ def load_data(filename, centroids_filename):
 
 
 def save_mst(mst_edges, filename):
-    """
-    Saves the MST edges to a .npy file.
-    Args:
-        mst_edges: List of edges (u, v) representing the MST.
-        filename: Path to the file where the MST will be saved.
-    """
+    
     try:
         np.save(filename, np.array(mst_edges))
         print(f"MST saved successfully to {filename}.")
@@ -88,14 +78,17 @@ def save_mst(mst_edges, filename):
         print(f"Error saving MST: {e}")
 
 def main():
-    filename = "scripts/navigation/results/adjacency_and_cost_matrices.npy"
-    centroids_filename = "scripts/navigation/results/centroids_data.npy"
-    mst_output_filename = "scripts/navigation/results/mst_edges.npy"  # Filename to save MST
+    rospy.init_node('MST')
+
+    filename = os.path.join(get_package_path(PACKAGE_NAME), 'scripts/navigation/results/adjacency_and_cost_matrices.npy')
+    centroids_filename = os.path.join(get_package_path(PACKAGE_NAME), 'scripts/navigation/results/centroids_data.npy')
+
+    mst_output_filename = os.path.join(get_package_path(PACKAGE_NAME), 'scripts/navigation/results/mst_edges.npy')  # Filename to save MST
 
     adjacency_matrix, cost_matrix, all_centroids = load_data(filename, centroids_filename)
 
-    z_lower_bound = 0 * 5  # Example lower bound (adjust as needed)
-    z_upper_bound = 4 * 5  # Example upper bound
+    z_lower_bound = 0 * (1/rospy.get_param('resolution', 0.2))  # Example lower bound (adjust as needed)
+    z_upper_bound = 4 * (1/rospy.get_param('resolution', 0.2))  # Example upper bound
 
     # Filter centroids within the Z bounds
     all_centroids = all_centroids[(all_centroids[:, 2] > z_lower_bound) & (all_centroids[:, 2] < z_upper_bound)]
@@ -112,7 +105,9 @@ def main():
         save_mst(mst_edges, mst_output_filename)
 
         # Plot the MST using Mayavi
-        plot_mst_with_mayavi(mst_edges, all_centroids)
+        
+        # plot_mst_with_mayavi(mst_edges, all_centroids)
+
     else:
         print("Data loading failed. Exiting...")
 

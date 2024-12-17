@@ -1,0 +1,8 @@
+<launch>
+    <!-- Pass parameters to the node -->
+
+    <param name="resolution" value="0.2"/>
+    <param name="initial_node" value="0"/>
+    <!-- Launch the Python script as a node -->
+    <node name="tsp_node" pkg="bim2ros" type="TSP.py" output="screen"/>
+</launch>

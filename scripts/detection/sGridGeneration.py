@@ -62,7 +62,7 @@ def process_points(tree, onedivres, grid_stepy, grid_stepz):
         for y in range(tam_y):
             for x in range(tam_x):
                 search_point = (float(x * RES), float(y * RES), float(z * RES))
-                elements = tree.select(search_point, extend=RES / 2)
+                elements = tree.select(search_point, extend=RES)
                 
                 formatted_search_point = (
                     f'{search_point[0]:.1f}', 
@@ -74,7 +74,7 @@ def process_points(tree, onedivres, grid_stepy, grid_stepz):
                     count += 1
                     for item in elements:
                         result_dict[item.GlobalId] += 1
-
+                        
                         if item.GlobalId not in global_id_to_int:
                             global_id_to_int[item.GlobalId] = current_int
                             current_int += 1
@@ -84,10 +84,13 @@ def process_points(tree, onedivres, grid_stepy, grid_stepz):
                         semantic_grid_ints[index] = assigned_int
                         print(f'{formatted_search_point} -> {assigned_int} -> {index}')
                 
-    return result_dict, global_id_to_int, semantic_grid_ints, semantic_grid_zeros
+    # Reshape semantic_grid_ints to a 3D matrix
+    semantic_grid_3d = semantic_grid_ints.reshape((tam_z, tam_y, tam_x))
+    
+    return result_dict, global_id_to_int, semantic_grid_ints, semantic_grid_zeros, semantic_grid_3d
 
 # Saving Results
-def save_results(global_id_to_int, result_dict, semantic_grid_ints, semantic_grid_zeros):
+def save_results(global_id_to_int, result_dict, semantic_grid_ints, semantic_grid_zeros, semantic_grid_3d):
     package_path = get_package_path(PACKAGE_NAME)
     grids_folder_path = os.path.join(package_path, "grids")
     os.makedirs(grids_folder_path, exist_ok=True)
@@ -102,6 +105,9 @@ def save_results(global_id_to_int, result_dict, semantic_grid_ints, semantic_gri
     # Save the semantic grids as npy files
     np.save(os.path.join(grids_folder_path, 'semantic_grid_ints.npy'), semantic_grid_ints)
     np.save(os.path.join(grids_folder_path, 'semantic_grid_zeros.npy'), semantic_grid_zeros)
+    
+    # Save the 3D matrix
+    np.save(os.path.join(grids_folder_path, 'semantic_grid_3d.npy'), semantic_grid_3d)
 
 # Main Execution
 if __name__ == "__main__":
@@ -114,6 +120,6 @@ if __name__ == "__main__":
     grid_stepy = GRID_SIZEX * onedivres
     grid_stepz = (GRID_SIZEX * onedivres) * (GRID_SIZEY * onedivres)
 
-    result_dict, global_id_to_int, semantic_grid_ints, semantic_grid_zeros = process_points(tree, onedivres, grid_stepy, grid_stepz)
-    save_results(global_id_to_int, result_dict, semantic_grid_ints, semantic_grid_zeros)
-    print("\033[92mFinished cleanly!\033[0m")
+    result_dict, global_id_to_int, semantic_grid_ints, semantic_grid_zeros, semantic_grid_3d = process_points(tree, onedivres, grid_stepy, grid_stepz)
+    save_results(global_id_to_int, result_dict, semantic_grid_ints, semantic_grid_zeros, semantic_grid_3d)
+    print("\033[92mFinished cleanly! 3D Matrix saved for visualization.\033[0m")
