@@ -90,9 +90,9 @@ def process_chunk(points):
             marker.pose.orientation.y = 0.0
             marker.pose.orientation.z = 0.0
             marker.pose.orientation.w = 1.0
-            marker.scale.x = RES
-            marker.scale.y = RES
-            marker.scale.z = RES
+            marker.scale.x = RES / 2
+            marker.scale.y = RES / 2
+            marker.scale.z = RES / 2
             marker.color.a = 0.8  # Opacity
             marker.color.r = 0.0  # Red
             marker.color.g = 1.0  # Green

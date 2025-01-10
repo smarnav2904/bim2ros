@@ -74,7 +74,7 @@ def process_points(tree, onedivres, grid_stepy, grid_stepz):
                     count += 1
                     for item in elements:
                         result_dict[item.GlobalId] += 1
-                        
+
                         if item.GlobalId not in global_id_to_int:
                             global_id_to_int[item.GlobalId] = current_int
                             current_int += 1
