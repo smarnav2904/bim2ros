@@ -1,15 +1,8 @@
 <launch>
-    <!-- Pass parameters to the node -->
-
-    <param name="resolution" value="0.1"/>
-    <param name="world_sizeX" value="50"/>
-    <param name="world_sizeY" value="22"/>
-    <param name="world_sizeZ" value="4"/>
-
-
-     <!-- add extension -->
-    <param name="map" value="casoplonv3.ifc"/>
+  
+    <param name="map" value="casa.gridm"/>
 
     <!-- Launch the Python script as a node -->
-    <node name="path_field_gen" pkg="bim2ros" type="path_field_gen.py" output="screen"/>
+    <node name="path_field_gen" pkg="bim2ros" type="load_gridm.py" output="screen"/>
 </launch>
+

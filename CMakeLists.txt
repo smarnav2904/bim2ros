@@ -162,7 +162,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  scripts/navigation/path_field_gen.py
+  scripts/navigation/load_gridm.py
   scripts/detection/sGridGeneration.py
   scripts/detection/bim2ros.py
   scripts/detection/pathfollower.py
