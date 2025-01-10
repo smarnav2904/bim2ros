@@ -41,7 +41,8 @@ class GridM:
                       f"Z={self.m_gridSizeZ}, SensorDev={self.m_sensorDev}")
 
                 # Calculate grid cell data size
-                cell_size = struct.calcsize('ffi')  # Each grid cell has 3 floats: dist, prob, seman
+                # Each grid cell has 3 floats: dist, prob, seman
+                cell_size = struct.calcsize('ffi')
                 expected_data_size = self.m_gridSize * cell_size
 
                 # Check if file contains enough data for the grid cells
@@ -51,10 +52,12 @@ class GridM:
 
                 # Read grid cells
                 grid_data = f.read(expected_data_size)
-                grid_cells = struct.unpack(f'{self.m_gridSize * 3}f', grid_data)
+                grid_cells = struct.unpack(
+                    f'{self.m_gridSize * 3}f', grid_data)
 
                 # Reshape grid cells into a NumPy array with 3 columns (dist, prob, seman)
-                self.grid_array = np.array(grid_cells, dtype=np.float32).reshape(self.m_gridSize, 3)
+                self.grid_array = np.array(
+                    grid_cells, dtype=np.float32).reshape(self.m_gridSize, 3)
 
             print("Grid data loaded successfully.")
             return True
@@ -83,7 +86,8 @@ class GridM:
 
         print(f"Printing a sample of {sample_size} grid cells:")
         for i, (dist, prob, seman) in enumerate(self.grid_array[:sample_size]):
-            print(f"Cell {i}: Distance = {dist}, Probability = {prob}, Semantic = {seman}")
+            print(
+                f"Cell {i}: Distance = {dist}, Probability = {prob}, Semantic = {seman}")
 
 
 def get_package_path(package_name):
@@ -102,7 +106,8 @@ def load_gridm_file(package_name, filename):
         file_path = os.path.join(package_path, "grids", filename)
         if not os.path.exists(file_path):
             # Print a friendly error message if the map is not found
-            print(f"Error: The file '{filename}' was not found in the 'grids' folder of the package '{package_name}'.")
+            print(
+                f"Error: The file '{filename}' was not found in the 'grids' folder of the package '{package_name}'.")
             raise FileNotFoundError(f"{file_path} does not exist.")
         return file_path
     except Exception as e:
@@ -127,9 +132,8 @@ def save_results(data, output_file):
         logging.error(f"Error saving results: {e}")
         raise
 
-def process_points(grid, gridSizeX, gridSizeY, gridSizeZ):
 
-    
+def process_points(grid, gridSizeX, gridSizeY, gridSizeZ):
 
     tam_x = int(gridSizeX)
     tam_y = int(gridSizeY)
@@ -143,28 +147,26 @@ def process_points(grid, gridSizeX, gridSizeY, gridSizeZ):
     for z in tqdm(range(tam_z), desc="Processing Z-dimension", unit="z-layer"):
         for y in range(tam_y):
             for x in range(tam_x):
-                index = point_to_index(x,y,z, tam_x, tam_x*tam_y)
-                
+                index = point_to_index(x, y, z, tam_x, tam_x*tam_y)
+
                 if (grid[index][0]) <= math.sqrt(0.1*0.1*3):
                     occupancy_grid[x][y][z] = 0  # Mark obstacle
                     edf[x][y][z] = 0
-                else: 
+                else:
                     edf[x][y][z] = grid[index][0]
-                
+
                 edf[x][y][z] = grid[index][0]
-                
-                
-                    
-                    
 
     save_results(occupancy_grid, output_file="occupancy_grid.npy")
     return edf
 
+
 def calculate_derivatives_3d(matrix):
-    derivative = lambda f1, f2: (f2 - f1) / 2.0
+    def derivative(f1, f2): return (f2 - f1) / 2.0
 
     rows, cols, depth = matrix.shape
-    change_matrix = np.zeros((rows, cols, depth))  # Initialize all cells as black (0)
+    # Initialize all cells as black (0)
+    change_matrix = np.zeros((rows, cols, depth))
     print(np.min(matrix))
     print(np.max(matrix))
     print(np.mean(matrix))
@@ -174,30 +176,35 @@ def calculate_derivatives_3d(matrix):
 
     thresh = 0.8
     max = 50
-    
 
     # Loop through each element in the matrix
     for i in range(1, rows - 1):
         for j in range(1, cols - 1):
             for k in range(1, depth - 1):
-                if matrix[i][j][k] > thresh and matrix[i][j][k] <  max and k<40:
-    
+                if matrix[i][j][k] > thresh and matrix[i][j][k] < max and k < 40:
+
                     # Calculate horizontal derivatives (XY-plane)
-                    dx1 = derivative(matrix[i, j, k], matrix[i, j+1, k])  # Right neighbor
-                    dx2 = derivative(matrix[i, j-1, k], matrix[i, j, k])  # Left neighbor
-                    
+                    # Right neighbor
+                    dx1 = derivative(matrix[i, j, k], matrix[i, j+1, k])
+                    dx2 = derivative(matrix[i, j-1, k],
+                                     matrix[i, j, k])  # Left neighbor
+
                     # Calculate vertical derivatives (XY-plane)
-                    dy1 = derivative(matrix[i, j, k], matrix[i+1, j, k])  # Bottom neighbor
-                    dy2 = derivative(matrix[i-1, j, k], matrix[i, j, k])  # Top neighbor
+                    # Bottom neighbor
+                    dy1 = derivative(matrix[i, j, k], matrix[i+1, j, k])
+                    dy2 = derivative(matrix[i-1, j, k],
+                                     matrix[i, j, k])  # Top neighbor
 
                     # Calculate depth (Z-axis) derivatives (XZ-plane)
-                    dz1 = derivative(matrix[i, j, k], matrix[i, j, k + 1])  # Forward in Z
-                    dz2 = derivative(matrix[i, j, k - 1], matrix[i, j, k])  # Backward in Z
-                    
-                    if ((np.sign(dx1) == np.sign(-dx2) and np.sign(dx2)>0 and np.sign(dx1)<0) or
-                        (np.sign(dy1) == np.sign(-dy2) and np.sign(dy2)>0 and np.sign(dy1)<0) or
-                        (np.sign(dz1) == np.sign(-dz2) and np.sign(dz2)>0 and np.sign(dz1)<0)):
-                            change_matrix[i, j, k] = 1  # White (change detected)
+                    # Forward in Z
+                    dz1 = derivative(matrix[i, j, k], matrix[i, j, k + 1])
+                    # Backward in Z
+                    dz2 = derivative(matrix[i, j, k - 1], matrix[i, j, k])
+
+                    if ((np.sign(dx1) == np.sign(-dx2) and np.sign(dx2) > 0 and np.sign(dx1) < 0) or
+                        (np.sign(dy1) == np.sign(-dy2) and np.sign(dy2) > 0 and np.sign(dy1) < 0) or
+                            (np.sign(dz1) == np.sign(-dz2) and np.sign(dz2) > 0 and np.sign(dz1) < 0)):
+                        change_matrix[i, j, k] = 1  # White (change detected)
 
     return change_matrix
 
@@ -207,7 +214,8 @@ if __name__ == "__main__":
 
     try:
         # Resolve and load the map.gridm file
-        gridm_file = load_gridm_file(PACKAGE_NAME, rospy.get_param('map', 'map.gridm'))
+        gridm_file = load_gridm_file(
+            PACKAGE_NAME, rospy.get_param('map', 'map.gridm'))
         gridm = GridM(gridm_file)
 
         if gridm.load_grid():
@@ -228,9 +236,6 @@ if __name__ == "__main__":
 
             voronoi_frontier = calculate_derivatives_3d(edf_3d)
             save_results(voronoi_frontier, output_file="voronoi_frontier.npy")
-
-
-
 
     except FileNotFoundError as e:
         logging.error(f"File not found: {e}")
