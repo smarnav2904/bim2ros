@@ -167,7 +167,9 @@ catkin_install_python(PROGRAMS
   scripts/detection/bim2ros.py
   scripts/detection/pathfollower.py
   scripts/navigation/TSP.py
+  scripts/navigation/MST.py
   scripts/navigation/voro.py
+  scripts/navigation/kdtree_cluster.py
   
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

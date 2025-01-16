@@ -72,9 +72,9 @@ def select_capped_equidistant_points(cluster_points, max_size):
 
 
 def calculate_medoids_or_capped(points, labels, min_cluster_size=10, max_size=500):
-    """Calculate medoids or capped equidistant points for clusters."""
+    """Calculate medoids or capped equidistant points for clusters, and store all cluster points."""
     unique_labels = set(labels)
-    cluster_representatives = []
+    cluster_details = []
 
     for label in unique_labels:
         if label != -1:  # Ignore noise points labeled as -1
@@ -82,17 +82,23 @@ def calculate_medoids_or_capped(points, labels, min_cluster_size=10, max_size=50
             if len(cluster_points) >= min_cluster_size:
                 if len(cluster_points) > max_size:
                     capped_points = select_capped_equidistant_points(cluster_points, max_size)
-                    cluster_representatives.extend(capped_points)
+                    medoid_or_capped = capped_points
                 else:
                     pairwise_distances = cdist(cluster_points, cluster_points, metric='euclidean')
                     medoid_index = np.argmin(pairwise_distances.sum(axis=1))
-                    cluster_representatives.append(cluster_points[medoid_index])
+                    medoid_or_capped = [cluster_points[medoid_index]]
 
-    return np.array(cluster_representatives)
+                cluster_details.append({
+                    "label": label,
+                    "points": cluster_points.tolist(),  # Convert to list for JSON serialization
+                    "representative": medoid_or_capped
+                })
+
+    return cluster_details
 
 
 def cluster_and_save_representatives(file_path, radius, min_samples, min_cluster_size, max_size, output_npy, ifc_file_name):
-    """Cluster points and save cluster representatives."""
+    """Cluster points and save all cluster details and medoids."""
     package_path = get_package_path(PACKAGE_NAME)
     file_path = os.path.join(package_path, file_path)
     output_npy = os.path.join(package_path, output_npy)
@@ -115,15 +121,20 @@ def cluster_and_save_representatives(file_path, radius, min_samples, min_cluster
 
     clustering = DBSCAN(eps=radius, min_samples=min_samples).fit(points)
     labels = clustering.labels_
-    cluster_representatives = calculate_medoids_or_capped(
+
+    cluster_details = calculate_medoids_or_capped(
         points, labels, min_cluster_size=min_cluster_size, max_size=max_size
     )
 
     ifc_points = get_centroid_data(ifc_file_path, thresh=1.6)
+    ifc_points *= 10
     filtered_points = np.array([point for point in ifc_points if point[2] < 40])
 
-    np.save(output_npy, {'Cluster_Medoids': cluster_representatives, 'Connections': filtered_points})
-    rospy.loginfo(f"Cluster representatives saved to {output_npy}")
+    np.save(output_npy, {
+        'Cluster_Details': cluster_details,
+        'Connections': filtered_points.tolist()  # Convert to list for JSON serialization
+    })
+    rospy.loginfo(f"Cluster details saved to {output_npy}")
     return True
 
 

@@ -201,10 +201,16 @@ def calculate_derivatives_3d(matrix):
                     # Backward in Z
                     dz2 = derivative(matrix[i, j, k - 1], matrix[i, j, k])
 
-                    if ((np.sign(dx1) == np.sign(-dx2) and np.sign(dx2) > 0 and np.sign(dx1) < 0) or
-                        (np.sign(dy1) == np.sign(-dy2) and np.sign(dy2) > 0 and np.sign(dy1) < 0) or
-                            (np.sign(dz1) == np.sign(-dz2) and np.sign(dz2) > 0 and np.sign(dz1) < 0)):
-                        change_matrix[i, j, k] = 1  # White (change detected)
+                    condition_count = 0
+                    if (np.sign(dx1) != np.sign(dx2) and np.sign(dx2) > 0 and np.sign(dx1) < 0):
+                        condition_count += 1
+                    if (np.sign(dy1) != np.sign(dy2) and np.sign(dy2) > 0 and np.sign(dy1) < 0):
+                        condition_count += 1
+                    if (np.sign(dz1) != np.sign(dz2) and np.sign(dz2) > 0 and np.sign(dz1) < 0):
+                        condition_count += 1
+
+                    if condition_count >= 1:
+                        change_matrix[i, j, k] = 1  # White (change detected) 
 
     return change_matrix
 
@@ -231,8 +237,9 @@ if __name__ == "__main__":
 
             edf = process_points(grid, grid_size_x, grid_size_y, grid_size_z)
             # Process the points and calculate EDF
-            save_results(grid, output_file="edf.npy")
+            
             edf_3d = np.transpose(edf, (0, 1, 2))
+            save_results(edf_3d, output_file="edf.npy")
 
             voronoi_frontier = calculate_derivatives_3d(edf_3d)
             save_results(voronoi_frontier, output_file="voronoi_frontier.npy")
