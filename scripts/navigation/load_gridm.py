@@ -11,7 +11,7 @@ import roslib
 PACKAGE_NAME = 'bim2ros'
 
 # Constants
-DEFAULT_THRESHOLD: float = 0.8
+DEFAULT_THRESHOLD: float = float(rospy.get_param('~thresh', 0.1))
 DEFAULT_MAX: float = 50
 GRID_FOLDER = "grids"
 

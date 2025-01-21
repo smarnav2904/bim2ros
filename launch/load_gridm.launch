@@ -1,8 +1,10 @@
 <launch>
   
     <param name="map" value="casa.gridm"/>
+    <param name="thresh" value="1"/>
 
     <!-- Launch the Python script as a node -->
     <node name="path_field_gen" pkg="bim2ros" type="load_gridm.py" output="screen"/>
+    
 </launch>
 

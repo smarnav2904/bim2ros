@@ -230,7 +230,7 @@ def main():
         c1, c2 = pair
         traversed_points = move_along_direction_vector(c1, c2, step_size=1)
         edf_values, out_of_bounds = check_edf_at_steps(traversed_points, edf)
-        if not out_of_bounds and all(float(value) >= 0.6 for value in edf_values):
+        if not out_of_bounds and all(float(value) >= edf_val for value in edf_values):
             final_graph.append(np.array(c1))
             final_graph.append(np.array(c2))
             cost = calculate_cost(edf_values)

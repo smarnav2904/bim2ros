@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 import numpy as np
-import heapq
 import rospy
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point
 import rospkg
-
 
 def load_pairs_with_costs_from_ros_package(package_name, file_name):
     """
@@ -34,33 +32,57 @@ def load_pairs_with_costs_from_ros_package(package_name, file_name):
     return None
 
 
-def build_mst_from_pairs(pairs_with_costs):
+def build_mst_kruskal(pairs_with_costs):
     """
-    Build the Minimum Spanning Tree (MST) using Prim's algorithm.
+    Build the Minimum Spanning Tree (MST) using Kruskal's algorithm.
     """
-    graph = {}
-    for c1, c2, cost in pairs_with_costs:
-        graph.setdefault(c1, []).append((c2, cost))
-        graph.setdefault(c2, []).append((c1, cost))
+    if not pairs_with_costs:
+        print("Error: No pairs with costs provided.")
+        return [], 0
+
+    # Sort all edges by cost
+    sorted_edges = sorted(pairs_with_costs, key=lambda x: x[2])
     
-    # Initialize Prim's algorithm
-    start_node = next(iter(graph))
-    visited = set()
-    min_heap = [(0, start_node)]  # Start with 0 cost
+    # Disjoint-set (Union-Find) data structure
+    parent = {}
+    rank = {}
+
+    def find(x):
+        if parent[x] != x:
+            parent[x] = find(parent[x])
+        return parent[x]
+
+    def union(x, y):
+        rootX = find(x)
+        rootY = find(y)
+        if rootX != rootY:
+            # Union by rank
+            if rank[rootX] > rank[rootY]:
+                parent[rootY] = rootX
+            elif rank[rootX] < rank[rootY]:
+                parent[rootX] = rootY
+            else:
+                parent[rootY] = rootX
+                rank[rootX] += 1
+
+    # Initialize the disjoint-set
+    for c1, c2, _ in sorted_edges:
+        if c1 not in parent:
+            parent[c1] = c1
+            rank[c1] = 0
+        if c2 not in parent:
+            parent[c2] = c2
+            rank[c2] = 0
+
     mst_edges = []
     total_cost = 0
 
-    while min_heap:
-        cost, node = heapq.heappop(min_heap)
-        if node in visited:
-            continue
-        visited.add(node)
-        total_cost += cost
-
-        for neighbor, edge_cost in graph[node]:
-            if neighbor not in visited:
-                heapq.heappush(min_heap, (edge_cost, neighbor))
-                mst_edges.append((node, neighbor, edge_cost))
+    # Process edges
+    for c1, c2, cost in sorted_edges:
+        if find(c1) != find(c2):
+            union(c1, c2)
+            mst_edges.append((c1, c2, cost))
+            total_cost += cost
 
     return mst_edges, total_cost
 
@@ -127,8 +149,8 @@ if __name__ == "__main__":
         print("Failed to load pairs with costs.")
         exit()
 
-    # Build the MST
-    mst_edges, total_cost = build_mst_from_pairs(pairs_with_costs)
+    # Build the MST using Kruskal's algorithm
+    mst_edges, total_cost = build_mst_kruskal(pairs_with_costs)
     if not mst_edges:
         print("No MST found.")
         exit()
