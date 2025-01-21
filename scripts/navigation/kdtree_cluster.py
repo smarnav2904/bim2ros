@@ -190,6 +190,8 @@ def main():
 
     cluster_file = rospy.get_param('~cluster_file', 'path/to/your/file.npy')
     edf = np.load(rospy.get_param('~edf_file', 'path/to/your/file.npy'))
+    edf_val = rospy.get_param('~edf_val', 0.1)
+
     if not os.path.exists(cluster_file):
         rospy.logerr(f"Cluster data file not found: {cluster_file}")
         return
@@ -210,7 +212,7 @@ def main():
         c2 = [int(x) for x in connection['nearest_cluster']['nearest_point']]
         traversed_points = move_along_direction_vector(c1, c2, step_size=1)
         edf_values, out_of_bounds = check_edf_at_steps(traversed_points, edf)
-        if not out_of_bounds and all(float(value) >= 0.6 for value in edf_values):
+        if not out_of_bounds and all(float(value) >= edf_val for value in edf_values):
             graph_points.append(np.array(c2))
             graph_points.append(np.array(c1))
 
