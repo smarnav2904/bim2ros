@@ -4,20 +4,21 @@ from scipy.spatial import KDTree
 from itertools import combinations
 import os
 import logging
+from typing import List, Tuple, Dict, Optional, Any
 import roslib
 from nav_msgs.msg import Path
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Point
 from visualization_msgs.msg import Marker
-
 
 PACKAGE_NAME = 'bim2ros'
 
-def bresenham_3d(x1, y1, z1, x2, y2, z2):
+
+def bresenham_3d(x1: int, y1: int, z1: int, x2: int, y2: int, z2: int) -> List[Tuple[int, int, int]]:
+    """3D Bresenham's algorithm to calculate a line between two points."""
     points = []
     x, y, z = x1, y1, z1
     dx, dy, dz = abs(x2 - x1), abs(y2 - y1), abs(z2 - z1)
-    xs, ys, zs = (1 if x2 > x1 else -1), (1 if y2 >
-                                          y1 else -1), (1 if z2 > z1 else -1)
+    xs, ys, zs = (1 if x2 > x1 else -1), (1 if y2 > y1 else -1), (1 if z2 > z1 else -1)
 
     if dx >= dy and dx >= dz:
         p1, p2 = 2 * dy - dx, 2 * dz - dx
@@ -63,13 +64,15 @@ def bresenham_3d(x1, y1, z1, x2, y2, z2):
     return points
 
 
-def move_along_direction_vector(c1, c2, step_size=1.0):
+def move_along_direction_vector(c1: Tuple[int, int, int], c2: Tuple[int, int, int], step_size: float = 1.0) -> List[Tuple[int, int, int]]:
+    """Move along a direction vector using Bresenham's algorithm."""
     x1, y1, z1 = c1
     x2, y2, z2 = c2
     return bresenham_3d(x1, y1, z1, x2, y2, z2)[::int(step_size)]
 
 
-def load_cluster_data(file_path):
+def load_cluster_data(file_path: str) -> Tuple[List[Dict[str, Any]], np.ndarray]:
+    """Load cluster details and connections from a file."""
     try:
         data = np.load(file_path, allow_pickle=True).item()
         cluster_details = data.get('Cluster_Details', [])
@@ -77,10 +80,11 @@ def load_cluster_data(file_path):
         return cluster_details, connections
     except Exception as e:
         rospy.logerr(f"Failed to load cluster data: {e}")
-        return [], []
+        return [], np.array([])
 
 
-def build_kdtrees(cluster_details):
+def build_kdtrees(cluster_details: List[Dict[str, Any]]) -> Tuple[Dict[str, KDTree], Dict[str, np.ndarray]]:
+    """Build KD-trees for each cluster."""
     kdtrees = {}
     clusters = {}
     for cluster in cluster_details:
@@ -92,7 +96,8 @@ def build_kdtrees(cluster_details):
     return kdtrees, clusters
 
 
-def process_ifc_points(ifc_points, kdtrees):
+def process_ifc_points(ifc_points: np.ndarray, kdtrees: Dict[str, KDTree]) -> List[Dict[str, Any]]:
+    """Find nearest clusters for IFC points."""
     cluster_connections = []
     for ifc_point in ifc_points:
         distances = []
@@ -113,7 +118,8 @@ def process_ifc_points(ifc_points, kdtrees):
     return cluster_connections
 
 
-def check_edf_at_steps(traversed_points, edf, radius=0):
+def check_edf_at_steps(traversed_points: List[Tuple[int, int, int]], edf: np.ndarray, radius: int = 0) -> Tuple[List[float], bool]:
+    """Check EDF values at the traversed points with optional radius."""
     offsets = np.array([(i, j, k) for i in range(-radius, radius + 1)
                         for j in range(-radius, radius + 1)
                         for k in range(-radius, radius + 1)])
@@ -129,15 +135,16 @@ def check_edf_at_steps(traversed_points, edf, radius=0):
     return edf_values, out_of_bounds
 
 
-def publish_line_strip(marker_pub, final_graph):
+def publish_line_strip(marker_pub: rospy.Publisher, final_graph: List[np.ndarray]) -> None:
+    """Publish the line strip marker for visualization."""
     marker = Marker()
-    marker.header.frame_id = "map"  # Adjust frame ID as needed
+    marker.header.frame_id = "map"
     marker.header.stamp = rospy.Time.now()
     marker.ns = "global_graph"
     marker.id = 0
     marker.type = Marker.LINE_STRIP
     marker.action = Marker.ADD
-    marker.scale.x = 0.05  # Line width
+    marker.scale.x = 0.05
     marker.color.r = 0.0
     marker.color.g = 1.0
     marker.color.b = 0.0
@@ -147,40 +154,29 @@ def publish_line_strip(marker_pub, final_graph):
         marker.points.append(make_point(c1, 10))
         marker.points.append(make_point(c2, 10))
 
-    rate = rospy.Rate(10)  # 10 Hz
+    rate = rospy.Rate(10)
     while not rospy.is_shutdown():
         marker_pub.publish(marker)
-    rate.sleep()
+        rate.sleep()
 
 
-def make_point(coords, res):
-    """Converts a tuple or list of (x, y, z) to a Point message with scaled values."""
-    from geometry_msgs.msg import Point
+def make_point(coords: Tuple[float, float, float], res: float) -> Point:
+    """Convert coordinates to a geometry_msgs Point."""
     point = Point()
-    point.x = coords[0] / res
-    point.y = coords[1] / res
-    point.z = coords[2] / res
+    point.x, point.y, point.z = coords[0] / res, coords[1] / res, coords[2] / res
     return point
 
 
-def calculate_cost(edf_values):
-    """Calculate cost as 1 / sum(edf_values)."""
+def calculate_cost(edf_values: List[float]) -> float:
+    """Calculate traversal cost based on EDF values."""
     total = sum(edf_values)
-    return len(edf_values) / total if total > 0 else float('inf')  # Avoid division by zero
+    return len(edf_values) / total if total > 0 else float('inf')
 
 
-def get_package_path(package_name):
-    """Retrieve the absolute path of a ROS package."""
+def save_results(data: Any, output_file: str) -> None:
+    """Save data to the 'grids' folder in the ROS package."""
     try:
-        return roslib.packages.get_pkg_dir(package_name)
-    except Exception as e:
-        logging.error(f"Failed to retrieve package path: {e}")
-        raise
-
-def save_results(data, output_file):
-    """Save data to a specified file in the 'grids' folder of the ROS package."""
-    try:
-        package_path = get_package_path(PACKAGE_NAME)
+        package_path = roslib.packages.get_pkg_dir(PACKAGE_NAME)
         grids_folder_path = os.path.join(package_path, "grids")
         os.makedirs(grids_folder_path, exist_ok=True)
         np.save(os.path.join(grids_folder_path, output_file), data)
@@ -188,7 +184,6 @@ def save_results(data, output_file):
     except Exception as e:
         logging.error(f"Error saving results: {e}")
         raise
-
 
 def main():
     rospy.init_node('kdtree_cluster_node', anonymous=True)
