@@ -1,10 +1,10 @@
 <launch>
     <!-- Pass parameters to the node -->
 
-    <param name="resolution" value="0.2"/>
+    <param name="resolution" value="0.1"/>
     <param name="world_sizeX" value="20"/>
     <param name="world_sizeY" value="20"/>
-    <param name="world_sizeZ" value="1"/>
+    <param name="world_sizeZ" value="4"/>
 
     <param name="threads" value="16"/>
     <param name="marker_update_interval" value="1"/>

@@ -241,7 +241,6 @@ def main():
             # Append the concatenated array to pairs_with_costs
             pairs_with_costs.append(pair_with_cost)
     
-    
     save_results(pairs_with_costs, "global_graph.npy")
     publish_line_strip(marker_pub, final_graph)
 

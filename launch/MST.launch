@@ -1,4 +1,4 @@
 <launch>
     <!-- Run the MST visualization script -->
-    <node name="mst_visualization_node" pkg="bim2ros" type="MST.py" output="screen"/>
+    <node name="bim2ros_mst_visualizer" pkg="bim2ros" type="MST.py" output="screen"/>
 </launch>

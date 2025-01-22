@@ -2,162 +2,110 @@
 
 import numpy as np
 import rospy
+import rospkg
+import networkx as nx
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point
-import rospkg
 
-def load_pairs_with_costs_from_ros_package(package_name, file_name):
-    """
-    Load pairs with costs from the specified package using rospkg.
-    """
-    try:
-        rospack = rospkg.RosPack()
-        package_path = rospack.get_path(package_name)
-        file_path = f"{package_path}/grids/{file_name}"
-        
-        # Load the data
-        data = np.load(file_path, allow_pickle=True)
-        if data.ndim != 2 or data.shape[1] != 7:
-            raise ValueError("Invalid data format. Expected Nx7 array.")
-        
-        # Parse the data into (c1, c2, cost)
-        pairs_with_costs = [
-            (tuple(row[:3]), tuple(row[3:6]), row[6]) for row in data
-        ]
-        return pairs_with_costs
-    except FileNotFoundError:
-        print(f"File '{file_name}' not found in package '{package_name}'.")
-    except Exception as e:
-        print(f"Error loading data: {e}")
-    return None
+def load_data(file_path):
+    """Load the .npy file containing graph data."""
+    return np.load(file_path)
 
+def build_cost_matrix(data, scale_factor=10):
+    """Create a cost matrix from graph data."""
+    # Scale points down by dividing by the scale factor
+    scaled_data = data.copy()
+    scaled_data[:, :6] /= scale_factor  # Scale x1, y1, z1, x2, y2, z2
 
-def build_mst_kruskal(pairs_with_costs):
-    """
-    Build the Minimum Spanning Tree (MST) using Kruskal's algorithm.
-    """
-    if not pairs_with_costs:
-        print("Error: No pairs with costs provided.")
-        return [], 0
-
-    # Sort all edges by cost
-    sorted_edges = sorted(pairs_with_costs, key=lambda x: x[2])
+    points = np.unique(scaled_data[:, :6].reshape(-1, 3), axis=0)
+    point_index = {tuple(p): i for i, p in enumerate(points)}
+    num_points = len(points)
     
-    # Disjoint-set (Union-Find) data structure
-    parent = {}
-    rank = {}
+    # Initialize cost matrix with -1
+    cost_matrix = np.full((num_points, num_points), -1.0)
+    
+    for row in scaled_data:
+        x1, y1, z1, x2, y2, z2, cost = row
+        idx1, idx2 = point_index[(x1, y1, z1)], point_index[(x2, y2, z2)]
+        cost_matrix[idx1, idx2] = cost
+        cost_matrix[idx2, idx1] = cost  # Assuming undirected graph
+    
+    return cost_matrix, points
 
-    def find(x):
-        if parent[x] != x:
-            parent[x] = find(parent[x])
-        return parent[x]
+def create_mst(cost_matrix):
+    """Generate the Minimum Spanning Tree using NetworkX."""
+    G = nx.Graph()
+    for i in range(len(cost_matrix)):
+        for j in range(len(cost_matrix)):
+            if cost_matrix[i][j] != -1:
+                G.add_edge(i, j, weight=cost_matrix[i][j])
+    mst = nx.minimum_spanning_tree(G)
+    return mst
 
-    def union(x, y):
-        rootX = find(x)
-        rootY = find(y)
-        if rootX != rootY:
-            # Union by rank
-            if rank[rootX] > rank[rootY]:
-                parent[rootY] = rootX
-            elif rank[rootX] < rank[rootY]:
-                parent[rootX] = rootY
-            else:
-                parent[rootY] = rootX
-                rank[rootX] += 1
+def save_mst_to_file(mst, points, file_path):
+    """Save MST edges and their costs to a text file."""
+    with open(file_path, "w") as f:
+        for edge in mst.edges(data=True):
+            idx1, idx2, data = edge
+            p1, p2 = points[idx1], points[idx2]
+            cost = data["weight"]
+            f.write(f"{p1.tolist()} -> {p2.tolist()} : {cost}\n")
 
-    # Initialize the disjoint-set
-    for c1, c2, _ in sorted_edges:
-        if c1 not in parent:
-            parent[c1] = c1
-            rank[c1] = 0
-        if c2 not in parent:
-            parent[c2] = c2
-            rank[c2] = 0
-
-    mst_edges = []
-    total_cost = 0
-
-    # Process edges
-    for c1, c2, cost in sorted_edges:
-        if find(c1) != find(c2):
-            union(c1, c2)
-            mst_edges.append((c1, c2, cost))
-            total_cost += cost
-
-    return mst_edges, total_cost
-
-
-def save_msts_to_txt(mst_edges, filename="mst_coordinates.txt"):
-    """
-    Save MST coordinates to a text file.
-    """
-    with open(filename, 'w') as f:
-        f.write("XYZ Coordinates of the points in the MST:\n")
-        for u, v, cost in mst_edges:
-            f.write(f"Point {u}: ({u[0]:.2f}, {u[1]:.2f}, {u[2]:.2f})\n")
-            f.write(f"Point {v}: ({v[0]:.2f}, {v[1]:.2f}, {v[2]:.2f})\n")
-            f.write(f"Cost: {cost:.2f}\n")
-    print(f"MST coordinates saved to '{filename}'.")
-
-
-def make_point(coordinates, z_offset=0):
-    """
-    Create a Point object from 3D coordinates.
-    """
-    point = Point()
-    point.x, point.y, point.z = coordinates[0] / 10, coordinates[1] / 10, coordinates[2] / 10
-    return point
-
-
-def publish_line_strip(marker_pub, mst_edges):
-    """
-    Publish the MST edges as a LINE_STRIP marker.
-    """
+def publish_mst(points, mst, publisher):
+    """Publish the Minimum Spanning Tree as a LINE_STRIP Marker."""
     marker = Marker()
-    marker.header.frame_id = "map"  # Adjust frame ID as needed
+    marker.header.frame_id = "map"
     marker.header.stamp = rospy.Time.now()
     marker.ns = "mst"
     marker.id = 0
     marker.type = Marker.LINE_STRIP
     marker.action = Marker.ADD
-    marker.scale.x = 0.1  # Line width
-    marker.color.r = 0.0
-    marker.color.g = 0.0
-    marker.color.b = 1.0
+    marker.scale.x = 0.1
     marker.color.a = 1.0
+    marker.color.r = 0.0
+    marker.color.g = 1.0
+    marker.color.b = 0.0
 
-    for u, v, _ in mst_edges:
-        marker.points.append(make_point(u))
-        marker.points.append(make_point(v))
+    for edge in mst.edges:
+        idx1, idx2 = edge
+        p1, p2 = points[idx1], points[idx2]
+        point1 = Point(x=p1[0], y=p1[1], z=p1[2])
+        point2 = Point(x=p2[0], y=p2[1], z=p2[2])
+        marker.points.extend([point1, point2])
 
-    rate = rospy.Rate(10)  # 10 Hz
+    publisher.publish(marker)
+
+def main():
+    rospy.init_node("bim2ros_mst_visualizer")
+    pub = rospy.Publisher("mst_marker", Marker, queue_size=10)
+    rate = rospy.Rate(1)  # 1 Hz
+
+    # Use rospkg to find the package path
+    rospack = rospkg.RosPack()
+    package_path = rospack.get_path('bim2ros')  # Replace 'BIM2ROS' with your actual package name
+    file_path = f"{package_path}/grids/global_graph.npy"
+    mst_file_path = f"{package_path}/grids/mst_edges.txt"
+    
+    try:
+        data = load_data(file_path)
+    except FileNotFoundError:
+        rospy.logerr(f"File not found: {file_path}")
+        return
+    
+    cost_matrix, points = build_cost_matrix(data)
+    mst = create_mst(cost_matrix)
+
+    # Save MST edges to a file
+    save_mst_to_file(mst, points, mst_file_path)
+    rospy.loginfo(f"MST edges saved to: {mst_file_path}")
+    
+    rospy.loginfo("Publishing MST visualization...")
     while not rospy.is_shutdown():
-        marker_pub.publish(marker)
+        publish_mst(points, mst, pub)
         rate.sleep()
 
-
 if __name__ == "__main__":
-    rospy.init_node('mst_visualization_node', anonymous=True)
-
-    # Define the package and file names
-    package_name = "bim2ros"
-    file_name = "global_graph.npy"
-
-    # Load pairs with costs
-    pairs_with_costs = load_pairs_with_costs_from_ros_package(package_name, file_name)
-    if not pairs_with_costs:
-        print("Failed to load pairs with costs.")
-        exit()
-
-    # Build the MST using Kruskal's algorithm
-    mst_edges, total_cost = build_mst_kruskal(pairs_with_costs)
-    if not mst_edges:
-        print("No MST found.")
-        exit()
-
-    # Save the MST to a file
-    save_msts_to_txt(mst_edges)
-
-    # Publish the MST as a LINE_STRIP marker
-    marker_pub = rospy.Publisher('mst_marker', Marker, queue_size=10)
-    publish_line_strip(marker_pub, mst_edges)
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass

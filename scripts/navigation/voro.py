@@ -126,7 +126,7 @@ def cluster_and_save_representatives(file_path, radius, min_samples, min_cluster
         points, labels, min_cluster_size=min_cluster_size, max_size=max_size
     )
 
-    ifc_points = get_centroid_data(ifc_file_path, thresh=1.6)
+    ifc_points = get_centroid_data(ifc_file_path, thresh= float(rospy.get_param('~overhallWidth', 1.6)))
     ifc_points *= 10
     filtered_points = np.array([point for point in ifc_points if point[2] < 40])
 
