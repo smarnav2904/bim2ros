@@ -68,4 +68,8 @@ pip install -r requirements.txt
    ```
    roslaunch bim2ros start_detection.launch
    ```
+
    
+## Acknowledgments
+This project uses the [IfcOpenShell](https://github.com/IfcOpenShell/IfcOpenShell) library, an open-source tool for working with Industry Foundation Classes (IFC) files.  
+Thank you to the IfcOpenShell contributors for their work on this powerful library.
