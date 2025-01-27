@@ -1,5 +1,6 @@
 # BIM2ROS
 
+![Logo Image](resources/logo.png)
 ![Banner Image](resources/banner.png)
 
 This repo aims to be one of the steps to integrate Building Information Modeling (or BIM) within ROS.

@@ -70,7 +70,7 @@ def process_chunk(points):
     # Process each transformed point
     for point in transformed_points:
         index = point2grid(point[0], point[1], point[2], onedivres, grid_stepy, grid_stepz)
-        if loaded_data_zeros[index] == 0 and loaded_data[index]:
+        if loaded_data_zeros[index] == 0 and loaded_data[index] and index< len(loaded_data):
             element_value = loaded_data[index]
             element_occurrences[element_value] = element_occurrences.get(element_value, 0) + 1
             loaded_data_zeros[index] = 1
