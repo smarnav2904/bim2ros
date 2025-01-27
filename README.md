@@ -1,6 +1,14 @@
 # BIM2ROS
 
-![Logo Image](resources/logo.png)
+<div align="center">
+
+  <a href="https://github.com/robotics-upo/bim2ros">
+    <img src="resources/logo.png" alt="Logo" width="170" height="100">
+  </a>
+
+<h3 align="center">Building state supervisor and path finder</h3>
+</div>
+
 ![Banner Image](resources/banner.png)
 
 This repo aims to be one of the steps to integrate Building Information Modeling (or BIM) within ROS.
