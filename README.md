@@ -69,6 +69,28 @@ pip install -r requirements.txt
    roslaunch bim2ros start_detection.launch
    ```
 
+## Movement Graph
+1. Dispose your gridm generated with [INSERT HEURISTICS HERE] in `grids` folder within the repo. Then:
+   ```
+   roslaunch bim2ros load_gridm.launch
+   ```
+
+2. Run 
+   ```
+   roslaunch bim2ros clusters.launch
+   ```
+   Then
+   ```
+   roslaunch bim2ros kdtree_clusters.launch
+   ```
+   You would be able to see a topic called `/global_graph` publishing the full global traversability graph
+
+3. To see the final path to follow, run:
+   ```
+   roslaunch bim2ros MST.launch
+   ```
+
+
    
 ## Acknowledgments
 This project uses the [IfcOpenShell](https://github.com/IfcOpenShell/IfcOpenShell) library, an open-source tool for working with Industry Foundation Classes (IFC) files.  
