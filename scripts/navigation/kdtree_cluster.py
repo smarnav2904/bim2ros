@@ -188,9 +188,9 @@ def save_results(data: Any, output_file: str) -> None:
 def main():
     rospy.init_node('kdtree_cluster_node', anonymous=True)
 
-    cluster_file = rospy.get_param('~cluster_file', 'path/to/your/file.npy')
-    edf = np.load(rospy.get_param('~edf_file', 'path/to/your/file.npy'))
-    edf_val = rospy.get_param('~edf_val', 0.1)
+    cluster_file = rospy.get_param('cluster_file', 'path/to/your/file.npy')
+    edf = np.load(rospy.get_param('edf_file', 'path/to/your/file.npy'))
+    edf_val = rospy.get_param('edf_val', 0.1)
 
     if not os.path.exists(cluster_file):
         rospy.logerr(f"Cluster data file not found: {cluster_file}")

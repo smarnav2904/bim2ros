@@ -7,12 +7,12 @@ import numpy as np
 from tqdm import tqdm
 import rospy
 import roslib
+from visualization_msgs.msg import Marker, MarkerArray  # Import ROS Marker messages
 
 PACKAGE_NAME = 'bim2ros'
 
 # Constants
-DEFAULT_THRESHOLD: float = float(rospy.get_param('~thresh', 0.1))
-DEFAULT_MAX: float = 50
+DEFAULT_THRESHOLD: float = float(rospy.get_param('thresh', 0.1))
 GRID_FOLDER = "grids"
 
 
@@ -134,46 +134,104 @@ def process_points(grid: np.ndarray, gridSizeX: int, gridSizeY: int, gridSizeZ: 
         for y in range(tam_y):
             for x in range(tam_x):
                 index = point_to_index(x, y, z, tam_x, tam_x * tam_y)
-                if grid[index][0] <= math.sqrt(0.1 * 0.1 * 3):
-                    occupancy_grid[x, y, z] = 0  # Mark obstacle
-                    edf[x, y, z] = 0
-                else:
-                    edf[x, y, z] = grid[index][0]
+
+                if (grid[index][0]) <= math.sqrt(0.1*0.1*3):
+                    occupancy_grid[x][y][z] = 0  # Mark obstacle
+                    edf[x][y][z] = 0
+                else: 
+                    edf[x][y][z] = grid[index][0]
+                
+                edf[x][y][z] = grid[index][0]
+                
+                
 
     save_results(occupancy_grid, output_file="occupancy_grid.npy")
     return edf
 
 
-def calculate_derivatives_3d(matrix: np.ndarray, threshold: float = DEFAULT_THRESHOLD, max_val: float = DEFAULT_MAX) -> np.ndarray:
+def calculate_derivatives_3d(matrix: np.ndarray, threshold: float = DEFAULT_THRESHOLD) -> np.ndarray:
     """Calculate 3D derivatives and detect changes."""
     rows, cols, depth = matrix.shape
     change_matrix = np.zeros((rows, cols, depth), dtype=np.uint8)
-
+    derivative = lambda f1, f2: (f2 - f1) / 2.0
     for i in range(1, rows - 1):
         for j in range(1, cols - 1):
             for k in range(1, depth - 1):
-                if threshold < matrix[i, j, k] < max_val and k < 40:
-                    dx1 = (matrix[i, j, k] - matrix[i, j + 1, k]) / 2.0
-                    dx2 = (matrix[i, j - 1, k] - matrix[i, j, k]) / 2.0
-                    dy1 = (matrix[i, j, k] - matrix[i + 1, j, k]) / 2.0
-                    dy2 = (matrix[i - 1, j, k] - matrix[i, j, k]) / 2.0
-                    dz1 = (matrix[i, j, k] - matrix[i, j, k + 1]) / 2.0
-                    dz2 = (matrix[i, j, k - 1] - matrix[i, j, k]) / 2.0
+                if  matrix[i, j, k] > threshold and k < 40:
+                    dx1 = derivative(matrix[i, j, k], matrix[i, j+1, k])  # Right neighbor
+                    dx2 = derivative(matrix[i, j-1, k], matrix[i, j, k])  # Left neighbor
+                    
+                    # Calculate vertical derivatives (XY-plane)
+                    dy1 = derivative(matrix[i, j, k], matrix[i+1, j, k])  # Bottom neighbor
+                    dy2 = derivative(matrix[i-1, j, k], matrix[i, j, k])  # Top neighbor
 
-                    if (
-                        np.sign(dx1) != np.sign(dx2) or
-                        np.sign(dy1) != np.sign(dy2) or
-                        np.sign(dz1) != np.sign(dz2)
-                    ):
-                        change_matrix[i, j, k] = 1
+                    # Calculate depth (Z-axis) derivatives (XZ-plane)
+                    dz1 = derivative(matrix[i, j, k], matrix[i, j, k + 1])  # Forward in Z
+                    dz2 = derivative(matrix[i, j, k - 1], matrix[i, j, k])  # Backward in Z
+                    
+                    condition_count = 0
+                    if (np.sign(dx1) != np.sign(dx2) and np.sign(dx2) > 0 and np.sign(dx1) < 0):
+                        condition_count += 1
+                    if (np.sign(dy1) != np.sign(dy2) and np.sign(dy2) > 0 and np.sign(dy1) < 0):
+                        condition_count += 1
+                    if (np.sign(dz1) != np.sign(dz2) and np.sign(dz2) > 0 and np.sign(dz1) < 0):
+                        condition_count += 1
+
+                    if condition_count >= 1:
+                        change_matrix[i, j, k] = 1  # White (change detected)
 
     return change_matrix
 
 
+def publish_markers_continuously(change_matrix: np.ndarray, scale: float = 0.1, publish_rate: float = 1.0) -> None:
+    """Continuously publish a MarkerArray to visualize changes in RViz."""
+    pub = rospy.Publisher("voro_markers", MarkerArray, queue_size=10)
+    rate = rospy.Rate(publish_rate)  # Set the publish rate in Hz
+    marker_id = 0
+
+    # Create MarkerArray only once since the data does not change
+    marker_array = MarkerArray()
+
+    for i in range(change_matrix.shape[0]):
+        for j in range(change_matrix.shape[1]):
+            for k in range(change_matrix.shape[2]):
+                if change_matrix[i, j, k] == 1:  # Change detected
+                    marker = Marker()
+                    marker.header.frame_id = "map"
+                    marker.header.stamp = rospy.Time.now()
+                    marker.ns = "voro_markers"
+                    marker.id = marker_id
+                    marker.type = Marker.SPHERE
+                    marker.action = Marker.ADD
+
+                    # Set the position of the marker
+                    marker.pose.position.x = i * scale
+                    marker.pose.position.y = j * scale
+                    marker.pose.position.z = k * scale
+
+                    # Set the scale and color of the marker
+                    marker.scale.x = scale
+                    marker.scale.y = scale
+                    marker.scale.z = scale
+                    marker.color.a = 1.0  # Alpha (transparency)
+                    marker.color.r = 1.0  # Red
+                    marker.color.g = 0.0  # Green
+                    marker.color.b = 0.0  # Blue
+
+                    marker_array.markers.append(marker)
+                    marker_id += 1
+
+    # Continuously publish the MarkerArray
+    print("Publishing!")
+    while not rospy.is_shutdown():
+        logging.info(f"Publishing {len(marker_array.markers)} markers to RViz.")
+        pub.publish(marker_array)
+        rate.sleep()
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-
+    rospy.init_node('path_field_gen', anonymous=True)
     try:
         # Resolve and load the map.gridm file
         gridm_file = load_gridm_file(
@@ -199,6 +257,9 @@ if __name__ == "__main__":
 
             voronoi_frontier = calculate_derivatives_3d(edf_3d)
             save_results(voronoi_frontier, output_file="voronoi_frontier.npy")
+            print("Saved!")
+            # Publish changes as markers to RViz continuously
+            publish_markers_continuously(voronoi_frontier)
 
     except FileNotFoundError as e:
         logging.error(f"File not found: {e}")

@@ -4,11 +4,11 @@
         <param name="radius" value="3" />
         <param name="min_samples" value="1" />
         <param name="min_cluster_size" value="10" />
-        <param name="max_size" value="1000" />
+        <param name="max_size" value="5000" />
         <param name="output_file" value="grids/medoids_data.npy" />
-        <param name="ifc_file_path" value="models/casoplonv3.ifc" />
+        <param name="ifc_file_path" value="models/hospital.ifc" />
 
          <!-- Be sure to set this param in IFC units (milimeters, meters, foot, yards...) -->
-        <param name='overhallWidth' value= '1400' /> 
+        <param name='overhallWidth' value= '1800' /> 
     </node>
 </launch>

@@ -7,6 +7,7 @@ import ifcopenshell
 import ifcopenshell.geom
 import logging
 import roslib
+from visualization_msgs.msg import Marker, MarkerArray
 
 PACKAGE_NAME = 'bim2ros'  # Replace with your actual package name
 
@@ -97,6 +98,50 @@ def calculate_medoids_or_capped(points, labels, min_cluster_size=10, max_size=50
     return cluster_details
 
 
+def publish_cluster_markers(cluster_details, scale=0.2, publish_rate=1.0):
+    """Publish cluster details as a MarkerArray to RViz."""
+    pub = rospy.Publisher("cluster_markers", MarkerArray, queue_size=10)
+    rate = rospy.Rate(publish_rate)
+    marker_array = MarkerArray()
+
+    marker_id = 0
+    for cluster in cluster_details:
+        points = cluster["representative"]
+
+        for point in points:
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = rospy.Time.now()
+            marker.ns = "cluster_markers"
+            marker.id = marker_id
+            marker.type = Marker.SPHERE
+            marker.action = Marker.ADD
+
+            # Set position for the marker
+            marker.pose.position.x = point[0] / 10
+            marker.pose.position.y = point[1] / 10
+            marker.pose.position.z = point[2] / 10
+
+            # Set scale and color
+            marker.scale.x = scale
+            marker.scale.y = scale
+            marker.scale.z = scale
+            marker.color.a = 1.0  # Alpha (transparency)
+            marker.color.r = 0.0  # Red
+            marker.color.g = 1.0  # Green
+            marker.color.b = 0.0  # Blue
+
+            marker_array.markers.append(marker)
+            marker_id += 1
+
+    # Publish markers continuously
+    print("Publishin clusters details!")
+    while not rospy.is_shutdown():
+        pub.publish(marker_array)
+        rospy.loginfo(f"Published {len(marker_array.markers)} markers.")
+        rate.sleep()
+
+
 def cluster_and_save_representatives(file_path, radius, min_samples, min_cluster_size, max_size, output_npy, ifc_file_name):
     """Cluster points and save all cluster details and medoids."""
     package_path = get_package_path(PACKAGE_NAME)
@@ -126,7 +171,7 @@ def cluster_and_save_representatives(file_path, radius, min_samples, min_cluster
         points, labels, min_cluster_size=min_cluster_size, max_size=max_size
     )
 
-    ifc_points = get_centroid_data(ifc_file_path, thresh= float(rospy.get_param('~overhallWidth', 1.6)))
+    ifc_points = get_centroid_data(ifc_file_path, thresh=float(rospy.get_param('overhallWidth', 1.6)))
     ifc_points *= 10
     filtered_points = np.array([point for point in ifc_points if point[2] < 40])
 
@@ -135,19 +180,22 @@ def cluster_and_save_representatives(file_path, radius, min_samples, min_cluster
         'Connections': filtered_points.tolist()  # Convert to list for JSON serialization
     })
     rospy.loginfo(f"Cluster details saved to {output_npy}")
+
+    # Publish cluster markers
+    publish_cluster_markers(cluster_details)
     return True
 
 
 def ros_node():
     """ROS node to run clustering and representative selection."""
     rospy.init_node('cluster_representatives_node', anonymous=True)
-    file_path = rospy.get_param('~input_file', 'grids/voronoi_frontier.npy')
-    radius = rospy.get_param('~radius', 5)
-    min_samples = rospy.get_param('~min_samples', 1)
-    min_cluster_size = rospy.get_param('~min_cluster_size', 10)
-    max_size = rospy.get_param('~max_size', 500)
-    output_npy = rospy.get_param('~output_file', 'grids/medoids_data.npy')
-    ifc_file_name = rospy.get_param('~ifc_file', 'models/casoplonv3.ifc')
+    file_path = rospy.get_param('input_file', 'grids/voronoi_frontier.npy')
+    radius = rospy.get_param('radius', 5)
+    min_samples = rospy.get_param('min_samples', 1)
+    min_cluster_size = rospy.get_param('min_cluster_size', 10)
+    max_size = rospy.get_param('max_size', 500)
+    output_npy = rospy.get_param('output_file', 'grids/medoids_data.npy')
+    ifc_file_name = rospy.get_param('ifc_file', 'models/casoplonv3.ifc')
 
     success = cluster_and_save_representatives(
         file_path, radius, min_samples, min_cluster_size, max_size, output_npy, ifc_file_name

@@ -2,6 +2,6 @@
     <node name="kdtree_cluster_node" pkg="bim2ros" type="kdtree_cluster.py" output="screen">
         <param name="cluster_file" value="$(find bim2ros)/grids/medoids_data.npy"/>
         <param name="edf_file" value="$(find bim2ros)/grids/edf.npy"/>
-        <param name='edf_val' value='1'/> 
+        <param name='edf_val' value='0.8'/> 
     </node>
 </launch>
