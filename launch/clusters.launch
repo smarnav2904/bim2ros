@@ -1,10 +1,10 @@
 <launch>
     <node pkg="bim2ros" type="voro.py" name="cluster_representatives_node" output="screen">
         <param name="input_file" value="grids/voronoi_frontier.npy" />
-        <param name="radius" value="3" />
+        <param name="radius" value="5" />
         <param name="min_samples" value="1" />
         <param name="min_cluster_size" value="10" />
-        <param name="max_size" value="5000" />
+        <param name="max_size" value="50000" />
         <param name="output_file" value="grids/medoids_data.npy" />
         <param name="ifc_file_path" value="models/hospital.ifc" />
 

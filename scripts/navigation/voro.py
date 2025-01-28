@@ -171,7 +171,7 @@ def cluster_and_save_representatives(file_path, radius, min_samples, min_cluster
         points, labels, min_cluster_size=min_cluster_size, max_size=max_size
     )
 
-    ifc_points = get_centroid_data(ifc_file_path, thresh=float(rospy.get_param('overhallWidth', 1.6)))
+    ifc_points = get_centroid_data(ifc_file_path, thresh=float(rospy.get_param('∼overhallWidth', 0)))
     ifc_points *= 10
     filtered_points = np.array([point for point in ifc_points if point[2] < 40])
 
@@ -189,13 +189,13 @@ def cluster_and_save_representatives(file_path, radius, min_samples, min_cluster
 def ros_node():
     """ROS node to run clustering and representative selection."""
     rospy.init_node('cluster_representatives_node', anonymous=True)
-    file_path = rospy.get_param('input_file', 'grids/voronoi_frontier.npy')
-    radius = rospy.get_param('radius', 5)
-    min_samples = rospy.get_param('min_samples', 1)
-    min_cluster_size = rospy.get_param('min_cluster_size', 10)
-    max_size = rospy.get_param('max_size', 500)
-    output_npy = rospy.get_param('output_file', 'grids/medoids_data.npy')
-    ifc_file_name = rospy.get_param('ifc_file', 'models/casoplonv3.ifc')
+    file_path = rospy.get_param('~input_file', 'grids/default.npy')
+    radius = rospy.get_param('~radius', 100)
+    min_samples = rospy.get_param('~min_samples', 0)
+    min_cluster_size = rospy.get_param('~min_cluster_size', 0)
+    max_size = rospy.get_param('~max_size', 0)
+    output_npy = rospy.get_param('~output_file', 'grids/default.npy')
+    ifc_file_name = rospy.get_param('~ifc_file_path', 'models/default.ifc')
 
     success = cluster_and_save_representatives(
         file_path, radius, min_samples, min_cluster_size, max_size, output_npy, ifc_file_name

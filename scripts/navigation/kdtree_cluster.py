@@ -136,27 +136,43 @@ def check_edf_at_steps(traversed_points: List[Tuple[int, int, int]], edf: np.nda
 
 
 def publish_line_strip(marker_pub: rospy.Publisher, final_graph: List[np.ndarray]) -> None:
-    """Publish the line strip marker for visualization."""
-    marker = Marker()
-    marker.header.frame_id = "map"
-    marker.header.stamp = rospy.Time.now()
-    marker.ns = "global_graph"
-    marker.id = 0
-    marker.type = Marker.LINE_STRIP
-    marker.action = Marker.ADD
-    marker.scale.x = 0.05
-    marker.color.r = 0.0
-    marker.color.g = 1.0
-    marker.color.b = 0.0
-    marker.color.a = 1.0
+    """Continuously publish line strips for each pair of points in the graph."""
+    rate = rospy.Rate(10)  # 10 Hz publishing rate
 
-    for c1, c2 in zip(final_graph[::2], final_graph[1::2]):
-        marker.points.append(make_point(c1, 10))
-        marker.points.append(make_point(c2, 10))
-
-    rate = rospy.Rate(10)
     while not rospy.is_shutdown():
-        marker_pub.publish(marker)
+        marker_id = 0  # Unique ID for each marker
+
+        for i in range(0, len(final_graph), 2):  # Iterate over pairs (c1, c2)
+            if i + 1 >= len(final_graph):  # Ensure the next point exists
+                break
+
+            c1, c2 = final_graph[i], final_graph[i + 1]
+
+            # Create a new marker for each pair
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = rospy.Time.now()
+            marker.ns = "global_graph"
+            marker.id = marker_id
+            marker.type = Marker.LINE_STRIP
+            marker.action = Marker.ADD
+
+            # Set the scale and color of the line
+            marker.scale.x = 0.05
+            marker.color.r = 0.0
+            marker.color.g = 1.0
+            marker.color.b = 0.0
+            marker.color.a = 1.0
+
+            # Add the points for this line segment
+            marker.points.append(make_point(c1, 10))
+            marker.points.append(make_point(c2, 10))
+
+            # Publish the marker
+            marker_pub.publish(marker)
+            marker_id += 1  # Increment the marker ID
+
+        rospy.loginfo(f"Published {marker_id} line segments.")
         rate.sleep()
 
 
@@ -185,12 +201,13 @@ def save_results(data: Any, output_file: str) -> None:
         logging.error(f"Error saving results: {e}")
         raise
 
+
 def main():
     rospy.init_node('kdtree_cluster_node', anonymous=True)
 
-    cluster_file = rospy.get_param('cluster_file', 'path/to/your/file.npy')
-    edf = np.load(rospy.get_param('edf_file', 'path/to/your/file.npy'))
-    edf_val = rospy.get_param('edf_val', 0.1)
+    cluster_file = rospy.get_param('~cluster_file', 'path/to/your/file.npy')
+    edf = np.load(rospy.get_param('~edf_file', 'path/to/your/file.npy'))
+    edf_val = rospy.get_param('~edf_val', 0)
 
     if not os.path.exists(cluster_file):
         rospy.logerr(f"Cluster data file not found: {cluster_file}")

@@ -210,13 +210,13 @@ def publish_markers_continuously(change_matrix: np.ndarray, scale: float = 0.1, 
                     marker.pose.position.z = k * scale
 
                     # Set the scale and color of the marker
-                    marker.scale.x = scale
-                    marker.scale.y = scale
-                    marker.scale.z = scale
+                    marker.scale.x = 0.2
+                    marker.scale.y = 0.2
+                    marker.scale.z = 0.2
                     marker.color.a = 1.0  # Alpha (transparency)
-                    marker.color.r = 1.0  # Red
-                    marker.color.g = 0.0  # Green
-                    marker.color.b = 0.0  # Blue
+                    marker.color.r = 0.0  # Red
+                    marker.color.g = 0.7  # Green
+                    marker.color.b = 1.0  # Blue
 
                     marker_array.markers.append(marker)
                     marker_id += 1
@@ -237,7 +237,7 @@ if __name__ == "__main__":
         gridm_file = load_gridm_file(
             PACKAGE_NAME, rospy.get_param('map', 'map.gridm'))
         gridm = GridM(gridm_file)
-
+    
         if gridm.load_grid():
             # Retrieve metadata and log details
             grid_size, grid_size_x, grid_size_y, grid_size_z, sensor_dev = gridm.get_metadata()
