@@ -37,7 +37,9 @@ def setup_ifc_geometry(ifc_file_path):
 def calcular_centro(vertices):
     """Calculate centroid and statistics of a set of vertices."""
     vertices = np.array(vertices).reshape(-1, 3)
+    print(vertices)
     centro = np.mean(vertices, axis=0)
+    print(centro)
     distancias = np.linalg.norm(vertices - centro, axis=1)
     rospy.loginfo(f"Centro: {centro}")
     rospy.loginfo(f"Media de distancias: {np.mean(distancias)}")
@@ -50,6 +52,7 @@ def get_centroid_data(ifc_file_path, thresh):
     model, settings = setup_ifc_geometry(ifc_file_path)
     elements = model.by_type('IfcDoor') + model.by_type('IfcWindow')
 
+    
     centroids = []
     for element in elements:
         if element.OverallWidth >= thresh:
@@ -123,13 +126,13 @@ def publish_cluster_markers(cluster_details, scale=0.2, publish_rate=1.0):
             marker.pose.position.z = point[2] / 10
 
             # Set scale and color
-            marker.scale.x = scale
-            marker.scale.y = scale
-            marker.scale.z = scale
+            marker.scale.x = 0.4
+            marker.scale.y = 0.4
+            marker.scale.z = 0.4
             marker.color.a = 1.0  # Alpha (transparency)
             marker.color.r = 0.0  # Red
             marker.color.g = 1.0  # Green
-            marker.color.b = 0.0  # Blue
+            marker.color.b = 1.0  # Blue
 
             marker_array.markers.append(marker)
             marker_id += 1
@@ -141,6 +144,46 @@ def publish_cluster_markers(cluster_details, scale=0.2, publish_rate=1.0):
         rospy.loginfo(f"Published {len(marker_array.markers)} markers.")
         rate.sleep()
 
+
+def publish_filtered_points(filtered_points: np.ndarray, frame_id: str = "map", scale: float = 0.2, rate_hz: float = 10.0):
+    """Publish filtered points as markers to RViz."""
+    pub = rospy.Publisher("filtered_points", MarkerArray, queue_size=10)
+    rate = rospy.Rate(rate_hz)
+    marker_array = MarkerArray()
+    
+    marker_id = 0
+    for point in filtered_points:
+        marker = Marker()
+        marker.header.frame_id = frame_id
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "filtered_points"
+        marker.id = marker_id
+        marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
+
+        # Set the position of the marker
+        marker.pose.position.x = point[0] / 10
+        marker.pose.position.y = point[1] / 10
+        marker.pose.position.z = point[2] / 10
+
+        # Set the scale (size) and color
+        marker.scale.x = 0.4
+        marker.scale.y = 0.4
+        marker.scale.z = 0.4
+        marker.color.r = 1.0  # Red
+        marker.color.g = 0.0  # Green
+        marker.color.b = 0.0  # Blue
+        marker.color.a = 1.0  # Fully opaque
+
+        marker_array.markers.append(marker)
+        marker_id += 1
+
+    # Publish markers continuously
+    rospy.loginfo("Publishing filtered points...")
+    while not rospy.is_shutdown():
+        pub.publish(marker_array)
+        rospy.loginfo(f"Published {len(marker_array.markers)} filtered points.")
+        rate.sleep()
 
 def cluster_and_save_representatives(file_path, radius, min_samples, min_cluster_size, max_size, output_npy, ifc_file_name):
     """Cluster points and save all cluster details and medoids."""
@@ -181,8 +224,12 @@ def cluster_and_save_representatives(file_path, radius, min_samples, min_cluster
     })
     rospy.loginfo(f"Cluster details saved to {output_npy}")
 
-    # Publish cluster markers
+    # # Publish cluster markers
     publish_cluster_markers(cluster_details)
+
+    # Publish filtered points
+    # publish_filtered_points(filtered_points)
+
     return True
 
 

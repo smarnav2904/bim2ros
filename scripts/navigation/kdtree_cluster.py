@@ -12,7 +12,6 @@ from visualization_msgs.msg import Marker
 
 PACKAGE_NAME = 'bim2ros'
 
-
 def bresenham_3d(x1: int, y1: int, z1: int, x2: int, y2: int, z2: int) -> List[Tuple[int, int, int]]:
     """3D Bresenham's algorithm to calculate a line between two points."""
     points = []
@@ -63,13 +62,11 @@ def bresenham_3d(x1: int, y1: int, z1: int, x2: int, y2: int, z2: int) -> List[T
     points.append((x2, y2, z2))
     return points
 
-
 def move_along_direction_vector(c1: Tuple[int, int, int], c2: Tuple[int, int, int], step_size: float = 1.0) -> List[Tuple[int, int, int]]:
     """Move along a direction vector using Bresenham's algorithm."""
     x1, y1, z1 = c1
     x2, y2, z2 = c2
     return bresenham_3d(x1, y1, z1, x2, y2, z2)[::int(step_size)]
-
 
 def load_cluster_data(file_path: str) -> Tuple[List[Dict[str, Any]], np.ndarray]:
     """Load cluster details and connections from a file."""
@@ -81,7 +78,6 @@ def load_cluster_data(file_path: str) -> Tuple[List[Dict[str, Any]], np.ndarray]
     except Exception as e:
         rospy.logerr(f"Failed to load cluster data: {e}")
         return [], np.array([])
-
 
 def build_kdtrees(cluster_details: List[Dict[str, Any]]) -> Tuple[Dict[str, KDTree], Dict[str, np.ndarray]]:
     """Build KD-trees for each cluster."""
@@ -95,28 +91,51 @@ def build_kdtrees(cluster_details: List[Dict[str, Any]]) -> Tuple[Dict[str, KDTr
             clusters[label] = points
     return kdtrees, clusters
 
-
-def process_ifc_points(ifc_points: np.ndarray, kdtrees: Dict[str, KDTree]) -> List[Dict[str, Any]]:
-    """Find nearest clusters for IFC points."""
+def process_ifc_points(ifc_points: np.ndarray, kdtrees: Dict[str, KDTree], edf: np.ndarray, edf_val: float) -> List[Dict[str, Any]]:
+    """Find up to two nearest clusters with valid EDF paths for each IFC point."""
     cluster_connections = []
+
     for ifc_point in ifc_points:
+        valid_clusters = []
         distances = []
+
+        # Calculate distances from the current IFC point to all clusters
         for label, tree in kdtrees.items():
             dist, index = tree.query(ifc_point)
             distances.append((label, dist, tree.data[index]))
+
+        # Sort clusters by distance to the IFC point
         distances.sort(key=lambda x: x[1])
-        if distances:
-            nearest_cluster = distances[0]
+
+        # Check each cluster in order of proximity
+        for label, dist, nearest_point in distances:
+            # Compute the path from IFC point to the cluster's nearest point
+            traversed_points = move_along_direction_vector(
+                tuple(map(int, ifc_point)), tuple(nearest_point), step_size=1
+            )
+
+            # Validate EDF values along the path
+            edf_values, out_of_bounds = check_edf_at_steps(traversed_points, edf)
+
+            if not out_of_bounds and all(float(value) >= edf_val for value in edf_values):
+                # Add valid cluster connection
+                valid_clusters.append({
+                    'label': label,
+                    'distance': dist,
+                    'nearest_point': nearest_point.tolist()
+                })
+
+            # # Stop if two valid clusters are found
+            # if len(valid_clusters) == 2:
+            #     break
+
+        if valid_clusters:
             cluster_connections.append({
                 'ifc_point': ifc_point.tolist(),
-                'nearest_cluster': {
-                    'label': nearest_cluster[0],
-                    'distance': nearest_cluster[1],
-                    'nearest_point': nearest_cluster[2].tolist()
-                }
+                'valid_clusters': valid_clusters
             })
-    return cluster_connections
 
+    return cluster_connections
 
 def check_edf_at_steps(traversed_points: List[Tuple[int, int, int]], edf: np.ndarray, radius: int = 0) -> Tuple[List[float], bool]:
     """Check EDF values at the traversed points with optional radius."""
@@ -129,11 +148,10 @@ def check_edf_at_steps(traversed_points: List[Tuple[int, int, int]], edf: np.nda
         valid_mask = ((0 <= new_points[:, 0]) & (new_points[:, 0] < edf.shape[0]) &
                       (0 <= new_points[:, 1]) & (new_points[:, 1] < edf.shape[1]) &
                       (0 <= new_points[:, 2]) & (new_points[:, 2] < edf.shape[2]))
-        valid_points = new_points[valid_mask]
+        valid_points = new_points[valid_mask].astype(int)
         edf_values.extend(edf[tuple(valid_points.T)])
     out_of_bounds = len(edf_values) == 0
     return edf_values, out_of_bounds
-
 
 def publish_line_strip(marker_pub: rospy.Publisher, final_graph: List[np.ndarray]) -> None:
     """Continuously publish line strips for each pair of points in the graph."""
@@ -175,19 +193,16 @@ def publish_line_strip(marker_pub: rospy.Publisher, final_graph: List[np.ndarray
         rospy.loginfo(f"Published {marker_id} line segments.")
         rate.sleep()
 
-
 def make_point(coords: Tuple[float, float, float], res: float) -> Point:
     """Convert coordinates to a geometry_msgs Point."""
     point = Point()
     point.x, point.y, point.z = coords[0] / res, coords[1] / res, coords[2] / res
     return point
 
-
 def calculate_cost(edf_values: List[float]) -> float:
     """Calculate traversal cost based on EDF values."""
     total = sum(edf_values)
     return len(edf_values) / total if total > 0 else float('inf')
-
 
 def save_results(data: Any, output_file: str) -> None:
     """Save data to the 'grids' folder in the ROS package."""
@@ -200,7 +215,42 @@ def save_results(data: Any, output_file: str) -> None:
     except Exception as e:
         logging.error(f"Error saving results: {e}")
         raise
+def publish_graph_points(marker_pub: rospy.Publisher, graph_points: List[np.ndarray], frame_id: str = "map") -> None:
+    """Publish graph points to RViz as sphere markers."""
+    rate = rospy.Rate(10)  # 10 Hz publishing rate
+    marker_id = 0  # Unique ID for each marker
 
+    while not rospy.is_shutdown():
+        for point in graph_points:
+            print(point)
+            marker = Marker()
+            marker.header.frame_id = frame_id
+            marker.header.stamp = rospy.Time.now()
+            marker.ns = "graph_points"
+            marker.id = marker_id
+            marker.type = Marker.SPHERE
+            marker.action = Marker.ADD
+
+            # Set the position of the marker
+            marker.pose.position.x = point[0] / 10
+            marker.pose.position.y = point[1] / 10
+            marker.pose.position.z = point[2] / 10
+
+            # Set the scale and color of the marker
+            marker.scale.x = 0.1  # Sphere size
+            marker.scale.y = 0.1
+            marker.scale.z = 0.1
+            marker.color.r = 1.0  # Red color
+            marker.color.g = 0.0
+            marker.color.b = 0.0
+            marker.color.a = 1.0  # Fully opaque
+
+            # Publish the marker
+            marker_pub.publish(marker)
+            marker_id += 1  # Increment the marker ID
+
+        rospy.loginfo(f"Published {len(graph_points)} graph points.")
+        rate.sleep()
 
 def main():
     rospy.init_node('kdtree_cluster_node', anonymous=True)
@@ -219,19 +269,18 @@ def main():
         return
 
     kdtrees, clusters = build_kdtrees(cluster_details)
-    cluster_connections = process_ifc_points(ifc_points, kdtrees)
+    cluster_connections = process_ifc_points(ifc_points, kdtrees, edf, edf_val)
 
     rospy.loginfo(f"Processed {len(cluster_connections)} IFC points.")
-
+    
     graph_points = []
     for connection in cluster_connections:
         c1 = [int(x) for x in connection['ifc_point']]
-        c2 = [int(x) for x in connection['nearest_cluster']['nearest_point']]
-        traversed_points = move_along_direction_vector(c1, c2, step_size=1)
-        edf_values, out_of_bounds = check_edf_at_steps(traversed_points, edf)
-        if not out_of_bounds and all(float(value) >= edf_val for value in edf_values):
+        graph_points.append(np.array(c1))
+        for cluster in connection['valid_clusters']:
+            c2 = [int(x) for x in cluster['nearest_point']]
             graph_points.append(np.array(c2))
-            graph_points.append(np.array(c1))
+            
 
     for cluster in cluster_details:
         for representative in cluster['representative']:
@@ -254,13 +303,13 @@ def main():
             print(f"{c1},{c2},{cost}")
 
             pair_with_cost = np.concatenate([c1, c2, np.array([cost])])
-        
+            
             # Append the concatenated array to pairs_with_costs
             pairs_with_costs.append(pair_with_cost)
     
     save_results(pairs_with_costs, "global_graph.npy")
     publish_line_strip(marker_pub, final_graph)
-
+    # publish_graph_points(marker_pub, graph_points)
 
 if __name__ == "__main__":
     try:
