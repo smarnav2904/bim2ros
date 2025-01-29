@@ -130,9 +130,9 @@ def publish_cluster_markers(cluster_details, scale=0.2, publish_rate=1.0):
             marker.scale.y = 0.4
             marker.scale.z = 0.4
             marker.color.a = 1.0  # Alpha (transparency)
-            marker.color.r = 0.0  # Red
-            marker.color.g = 1.0  # Green
-            marker.color.b = 1.0  # Blue
+            marker.color.r = 1.0  # Red
+            marker.color.g = 0.0  # Green
+            marker.color.b = 0.0  # Blue
 
             marker_array.markers.append(marker)
             marker_id += 1

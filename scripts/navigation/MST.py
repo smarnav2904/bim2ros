@@ -52,13 +52,13 @@ def save_mst_to_file(mst, points, file_path):
             f.write(f"{p1.tolist()} -> {p2.tolist()} : {cost}\n")
 
 def publish_mst(points, mst, publisher):
-    """Publish the Minimum Spanning Tree as a LINE_STRIP Marker."""
+    """Publish the Minimum Spanning Tree as a LINE_LIST Marker."""
     marker = Marker()
     marker.header.frame_id = "map"
     marker.header.stamp = rospy.Time.now()
     marker.ns = "mst"
     marker.id = 0
-    marker.type = Marker.LINE_STRIP
+    marker.type = Marker.LINE_LIST  # Use LINE_LIST instead of LINE_STRIP
     marker.action = Marker.ADD
     marker.scale.x = 0.1
     marker.color.a = 1.0
@@ -69,9 +69,9 @@ def publish_mst(points, mst, publisher):
     for edge in mst.edges:
         idx1, idx2 = edge
         p1, p2 = points[idx1], points[idx2]
-        point1 = Point(x=p1[0], y=p1[1], z=p1[2])
-        point2 = Point(x=p2[0], y=p2[1], z=p2[2])
-        marker.points.extend([point1, point2])
+        # Add both points for each pair in LINE_LIST format
+        marker.points.append(Point(x=p1[0], y=p1[1], z=p1[2]))
+        marker.points.append(Point(x=p2[0], y=p2[1], z=p2[2]))
 
     publisher.publish(marker)
 
@@ -94,7 +94,6 @@ def main():
     
     cost_matrix, points = build_cost_matrix(data)
     mst = create_mst(cost_matrix)
-
     # Save MST edges to a file
     save_mst_to_file(mst, points, mst_file_path)
     rospy.loginfo(f"MST edges saved to: {mst_file_path}")

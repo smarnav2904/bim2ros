@@ -125,9 +125,9 @@ def process_ifc_points(ifc_points: np.ndarray, kdtrees: Dict[str, KDTree], edf: 
                     'nearest_point': nearest_point.tolist()
                 })
 
-            # # Stop if two valid clusters are found
-            # if len(valid_clusters) == 2:
-            #     break
+            # Stop if two valid clusters are found
+            if len(valid_clusters) == 2:
+                break
 
         if valid_clusters:
             cluster_connections.append({
@@ -202,7 +202,8 @@ def make_point(coords: Tuple[float, float, float], res: float) -> Point:
 def calculate_cost(edf_values: List[float]) -> float:
     """Calculate traversal cost based on EDF values."""
     total = sum(edf_values)
-    return len(edf_values) / total if total > 0 else float('inf')
+    return total if total > 0 else float('inf')
+    # return len(edf_values) / total if total > 0 else float('inf')
 
 def save_results(data: Any, output_file: str) -> None:
     """Save data to the 'grids' folder in the ROS package."""
