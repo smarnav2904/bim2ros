@@ -62,6 +62,8 @@ First of all you will need to drop your IFC file from your BIM project on `Model
    roslaunch bim2ros start_detection.launch
    ```
 
+![Inspection Image](resources/detection.png)
+
 ## Movement Graph
 1. Dispose your gridm generated with [Heuristic Path Planner](<https://github.com/robotics-upo/Heuristic_path_planners>)] in `grids` folder within the repo. Then:
    ```
@@ -74,12 +76,16 @@ First of all you will need to drop your IFC file from your BIM project on `Model
    ```
   This will show which points of the Voronoi are going to be visited in `/cluster_medoids` . Adjusting the paramaters will make you be able to have more density in points if you want, but affecting on performance.
 
+![Banner Image](resources/voroo.png)
+
   Then, you can run:
    ```
    roslaunch bim2ros kdtree_clusters.launch
    ```
   This will show you which points are reachable from one to other. Remember to adjust the parameters depending on how restrictive you want the connections to be made.
   You would be able to see a topic called `/global_graph` publishing the full global traversability graph
+
+![Graph Image](resources/gg.png)
 
 3. To see the final path to follow, run:
    ```
