@@ -25,9 +25,7 @@ This repo aims to be one of the steps to integrate Building Information Modeling
 
 ## Introduction
 
-BIM2ROS is a toolkit that integrates Building Information Modeling (BIM) with the Robot Operating System (ROS), enabling robots to navigate and interact within 3D architectural spaces. It converts BIM data (e.g., from IFC files) into ROS-compatible formats, supporting tasks like path planning and obstacle avoidance in construction, facility management, and smart buildings. BIM2ROS streamlines the use of robotic systems in BIM environments, enhancing efficiency and accuracy in autonomous operations. This repo just contains the code regarding generation of information used in navigation and inspection, to further extend, check this list:
-- Pending
-- Pending
+BIM2ROS is a toolkit that integrates Building Information Modeling (BIM) with the Robot Operating System (ROS), enabling robots to navigate and interact within 3D architectural spaces. It converts BIM data (e.g., from IFC files) into ROS-compatible formats, supporting tasks like path planning and obstacle avoidance in construction, facility management, and smart buildings. BIM2ROS streamlines the use of robotic systems in BIM environments, enhancing efficiency and accuracy in autonomous operations. This repo just contains the code regarding generation of information used in navigation and inspection.
 ---
 
 ## Features
@@ -49,18 +47,12 @@ pip install -r requirements.txt
 
 ## Usage
 
-1. Drop your IFC file from your BIM project on `Models` folder.
-2. Create your own launch file on the `launch` folder. (Be sure to put the correct params for your project to avoid memory overuse).
-3. Run:
-   ```
-   roslaunch bim2ros your_launch.launch
-   ```
-   It will start creating lots of useful information on the results folder.
+First of all you will need to drop your IFC file from your BIM project on `Models` folder.
 
 ## Element Inspection
-1. You would need to generate the 3D Grid and Semantic Mapping information, to do so, check `launch/start_generation.launch`. Then:
+1. You would need to generate the 3D Grid and Semantic Mapping information, to do so, check `launch/start_generation.launch` to take an example how params should be established. Then:
    ```
-   roslaunch bim2ros generation.launch
+   roslaunch bim2ros your_file_generation.launch
    ```
    That would start creating all the necessary information.
 
@@ -70,25 +62,29 @@ pip install -r requirements.txt
    ```
 
 ## Movement Graph
-1. Dispose your gridm generated with [INSERT HEURISTICS HERE] in `grids` folder within the repo. Then:
+1. Dispose your gridm generated with [Heuristic Path Planner](<https://github.com/robotics-upo/Heuristic_path_planners>)] in `grids` folder within the repo. Then:
    ```
    roslaunch bim2ros load_gridm.launch
    ```
-
-2. Run 
+  This will load the EDF and generate a Voronoi 3D approximation of the space. This will be published on a topic called `/voro_markers`
+2. You will need to launch 
    ```
    roslaunch bim2ros clusters.launch
    ```
-   Then
+This will show which points of the Voronoi are going to be visited in `/cluster_medoids` . Adjusting the paramaters will make you be able to have more density in points if you want, but affecting on performance.
+
+Then, you can run:
    ```
    roslaunch bim2ros kdtree_clusters.launch
    ```
-   You would be able to see a topic called `/global_graph` publishing the full global traversability graph
+This will show you which points are reachable from one to other. Remember to adjust the parameters depending on how restrictive you want the connections to be made.
+You would be able to see a topic called `/global_graph` publishing the full global traversability graph
 
 3. To see the final path to follow, run:
    ```
    roslaunch bim2ros MST.launch
    ```
+   If you wanna see those connections on text format, they will be saved as `mst_edges`
 
 
    
