@@ -33,7 +33,8 @@ BIM2ROS is a toolkit that integrates Building Information Modeling (BIM) with th
 
 - **EDF Calculation:** Uses Euclidean Distance Field to represent obstacles and open space.
 - **Graph Construction:** Dynamically builds a graph based on obstacle-free paths.
-
+- **Element detection:** Know which object are truly present compared to how they should be.
+- **Voronoi3D:** Mark zones where distances are big enough to be considered free of obstacles.
 
 ---
 
@@ -71,20 +72,20 @@ First of all you will need to drop your IFC file from your BIM project on `Model
    ```
    roslaunch bim2ros clusters.launch
    ```
-This will show which points of the Voronoi are going to be visited in `/cluster_medoids` . Adjusting the paramaters will make you be able to have more density in points if you want, but affecting on performance.
+  This will show which points of the Voronoi are going to be visited in `/cluster_medoids` . Adjusting the paramaters will make you be able to have more density in points if you want, but affecting on performance.
 
-Then, you can run:
+  Then, you can run:
    ```
    roslaunch bim2ros kdtree_clusters.launch
    ```
-This will show you which points are reachable from one to other. Remember to adjust the parameters depending on how restrictive you want the connections to be made.
-You would be able to see a topic called `/global_graph` publishing the full global traversability graph
+  This will show you which points are reachable from one to other. Remember to adjust the parameters depending on how restrictive you want the connections to be made.
+  You would be able to see a topic called `/global_graph` publishing the full global traversability graph
 
 3. To see the final path to follow, run:
    ```
    roslaunch bim2ros MST.launch
    ```
-   If you wanna see those connections on text format, they will be saved as `mst_edges`
+   If you wanna see those connections on text format, they will be saved as `mst_edges.txt`
 
 
    
